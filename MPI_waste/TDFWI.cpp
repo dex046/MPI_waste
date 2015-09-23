@@ -302,7 +302,7 @@ void MallocVariables(AFDPU2D Pa,
 
 
 /*------------------------------------------------------------------------
-function: MallocVariables
+function: GenerateNPML
 
 Information:
 生成NPML系数
@@ -534,15 +534,15 @@ h_Vp: 当前速度的平方
 ------------------------------------------------------------------------*/
 void StepU(AFDPU2D Pa,
             float *h_U_next,
-            float *h_U_now,
-            float *h_U_past,
+            float *h_U_now,//
+            float *h_U_past,//
             float *h_V,
             float *h_W,
-            float *h_PHIx_V_x,
-            float *h_PHIz_W_z,
+            float *h_PHIx_V_x,//
+            float *h_PHIz_W_z,//
             float *h_Bx,
             float *h_Bz,
-            float *h_Vp)
+            float *h_Vp)//
 {
     uint nnx = Pa.Nx + 2 * Pa.PMLx;
     uint nnz = Pa.Nz + 2 * Pa.PMLz;
@@ -1209,7 +1209,7 @@ sgs_t: 观测波场
 void CalTrueWF(AFDPU2D Pa,
             IP *ip,
             CPUVs *plan,
-            float *sgs_t)
+            float *sgs_t)//plan  sgs_t
 {
     uint nnx = Pa.Nx + 2 * Pa.PMLx;
     uint nnz = Pa.Nz + 2 * Pa.PMLz;
@@ -1246,30 +1246,30 @@ void CalTrueWF(AFDPU2D Pa,
 
             // 一步记录炮集
             StepShotGather(Pa, plan->h_U_now, plan->h_TrueWF,
-                plan->h_re, it, ip->St[is].rn);
+                plan->h_re, it, ip->St[is].rn);//h_TrueWF
 
             // 一步更新波场U的卷积项
             StepPHIU(Pa, plan->h_U_now, plan->h_PHIx_U_x,
-                plan->h_PHIz_U_z, plan->h_Bx, plan->h_Bz);
+                plan->h_PHIz_U_z, plan->h_Bx, plan->h_Bz);//h_PHIx_U_x   h_PHIz_U_z
 
             // 一步更新波场V和W
             StepVW(Pa, plan->h_U_now, plan->h_V, plan->h_W,
-                plan->h_PHIx_U_x, plan->h_PHIz_U_z, plan->h_Bx, plan->h_Bz);
+                plan->h_PHIx_U_x, plan->h_PHIz_U_z, plan->h_Bx, plan->h_Bz);//h_V  h_W
 
             // 一步更新V和W的卷积项
             StepPHIVW(Pa, plan->h_V, plan->h_W, plan->h_PHIx_V_x,
-                plan->h_PHIz_W_z, plan->h_Bx, plan->h_Bz);
+                plan->h_PHIz_W_z, plan->h_Bx, plan->h_Bz);//h_PHIx_V_x    h_PHIz_W_z
 
             // 一步更新波场U
             StepU(Pa, plan->h_U_next, plan->h_U_now, plan->h_U_past,
                 plan->h_V, plan->h_W, plan->h_PHIx_V_x, plan->h_PHIz_W_z,
-                plan->h_Bx, plan->h_Bz, plan->h_Vp);
+                plan->h_Bx, plan->h_Bz, plan->h_Vp);//h_U_next
 
             // 加震源
             Wavelet = Ricker(Pa.f0, it * Pa.dt);
 
             AddSource(Pa, plan->h_U_next, ip->St[is].s,
-                Wavelet, plan->h_Vp);
+                Wavelet, plan->h_Vp);//h_U_next
         }
 
         // 输出炮集
@@ -1385,7 +1385,7 @@ void CalGrad(AFDPU2D Pa,
             Wavelet = Ricker(Pa.f0, it * Pa.dt);
 
             AddSource(Pa, plan->h_U_next, ip->St[is].s,
-                Wavelet, plan->h_Vp);
+                Wavelet, plan->h_Vp);//h_U_next
         }
 
         // 输出炮集

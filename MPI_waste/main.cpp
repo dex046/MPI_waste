@@ -19,48 +19,39 @@ using namespace std;
 
 int main(int argc, char ** argv)
 {
-    MPI_Init(&argc, &argv);
-    int size, pid;
-    MPI_Comm_size(MPI_COMM_WORLD, &size);
-    MPI_Comm_rank(MPI_COMM_WORLD, &pid);
-    if(pid == 0)
-    {
-        // 有限差分正演参数
-        AFDPU2D *Pa;
-        Pa = new AFDPU2D[1];
-        memset((void *)Pa, 0, sizeof(AFDPU2D));
-        Pa->dt = 0.001f;// 采样间隔
-        Pa->dx = 10.0f;// 横向网格间距
-        Pa->dz = 10.0f;// 纵向网格间距
-        Pa->f0 = 10.0f;// 正演子波的主频
-        Pa->Nt = 3000;// 正演的时间步数
-        Pa->Nx = 510;// 横向的网格数
-        Pa->Nz = 134;// 纵向网格数
-        Pa->PMLx = 50;// 横向NPML内的网格数
-        Pa->PMLz = 50;// 纵向NPML内的网格数
-        uint nnx = Pa->Nx + 2 * Pa->PMLx;
-        uint nnz = Pa->Nz + 2 * Pa->PMLz;
+    // 有限差分正演参数
+    AFDPU2D *Pa;
+    Pa = new AFDPU2D[1];
+    memset((void *)Pa, 0, sizeof(AFDPU2D));
+    Pa->dt = 0.001f;// 采样间隔
+    Pa->dx = 10.0f;// 横向网格间距
+    Pa->dz = 10.0f;// 纵向网格间距
+    Pa->f0 = 10.0f;// 正演子波的主频
+    Pa->Nt = 3000;// 正演的时间步数
+    Pa->Nx = 510;// 横向的网格数
+    Pa->Nz = 134;// 纵向网格数
+    Pa->PMLx = 100;// 横向NPML内的网格数
+    Pa->PMLz = 100;// 纵向NPML内的网格数
+    uint nnx = Pa->Nx + 2 * Pa->PMLx;
+    uint nnz = Pa->Nz + 2 * Pa->PMLz;
 
-        // 反演参数
-        IP *ip;
-        ip = new IP[1];
-        memset((void *)ip, 0, sizeof(IP));
-        ip->ShotN = 1;
-        ip->IterN = 1;
-        ip->Alpha = 0.0f;
-        ip->TrueVp = new float[nnz * nnx];
-        memset((void *)ip->TrueVp, 0, sizeof(float) * nnz * nnx);
-        ip->CurrVp = new float[nnz * nnx];
-        memset((void *)ip->CurrVp, 0, sizeof(float) * nnz * nnx);
-        ip->GradVp = new float[Pa->Nz * Pa->Nx];
-        memset((void *)ip->GradVp, 0, sizeof(float) * Pa->Nz * Pa->Nx);
-        ip->ObjIter = new float[ip->IterN];
-        memset((void *)ip->ObjIter, 0, sizeof(float) * ip->IterN);
-        ip->St = new Shot[ip->ShotN];
-        memset((void *)ip->St, 0, ip->ShotN * sizeof(Shot));
-    }
-
-
+    // 反演参数
+    IP *ip;
+    ip = new IP[1];
+    memset((void *)ip, 0, sizeof(IP));
+    ip->ShotN = 1;
+    ip->IterN = 1;
+    ip->Alpha = 0.0f;
+    ip->TrueVp = new float[nnz * nnx];
+    memset((void *)ip->TrueVp, 0, sizeof(float) * nnz * nnx);
+    ip->CurrVp = new float[nnz * nnx];
+    memset((void *)ip->CurrVp, 0, sizeof(float) * nnz * nnx);
+    ip->GradVp = new float[Pa->Nz * Pa->Nx];
+    memset((void *)ip->GradVp, 0, sizeof(float) * Pa->Nz * Pa->Nx);
+    ip->ObjIter = new float[ip->IterN];
+    memset((void *)ip->ObjIter, 0, sizeof(float) * ip->IterN);
+    ip->St = new Shot[ip->ShotN];
+    memset((void *)ip->St, 0, ip->ShotN * sizeof(Shot));
     // 炮信息
     for (uint is = 0; is < ip->ShotN; is++)
     {
@@ -77,11 +68,9 @@ int main(int argc, char ** argv)
             ip->St[is].re[m].Rz = Pa->PMLz + 2;
         }
     }
-
-    // 读取速度信息
     char TrueVp[] = "TrueVp-510-134-marmousi.sgy";
     char InitVp[] = "InitVp-510-134-marmousi.sgy";
-
+    // 读取速度信息
     ReadData(TrueVp, ip->TrueVp, 0);
     ReadData(InitVp, ip->CurrVp, 0);
 
@@ -109,7 +98,6 @@ int main(int argc, char ** argv)
 
     // 给有效边界的坐标赋值
     SetCoord(Pa, plan->h_Coord);// h_Coord 有效边界存储策略需要存储的点的坐标
-
     cout << "********************************************************************************************" << endl;
     cout << "Doing Time domain Full Waveform Inversion ..." << endl;
     cout << "Parameters of Inversion are as follows:" << endl;
@@ -124,14 +112,16 @@ int main(int argc, char ** argv)
     cout << "\tNshot = " << ip->ShotN << endl;
     cout << "\tIteration number = " << ip->IterN << endl;
     cout << "********************************************************************************************" << endl;
-
     clock_t begin, duration;
 
     // 求取观测波场
     cout << "\tCalculating the observed data..." << endl;
 
     begin = clock();
-    CalTrueWF(*Pa, ip, plan, sgs_t);//求取观测波场
+
+
+
+    CalTrueWF(*Pa, ip, plan, sgs_t);//求取观测波场 plan  sgs_t
     duration = clock() - begin;
 
     cout << "\tCalculating the observed data used:\t" << duration / CLOCKS_PER_SEC << "s" << endl;
