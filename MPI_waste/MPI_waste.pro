@@ -5,7 +5,8 @@ CONFIG -= qt
 
 SOURCES += main.cpp \
     RWsgy.cpp \
-    TDFWI.cpp
+    TDFWI.cpp \
+    testmain.cpp
 
 INCLUDEPATH += /usr/include/mpich-x86_64/
 DEPENDPATH  += /usr/include/mpich-x86_64/
