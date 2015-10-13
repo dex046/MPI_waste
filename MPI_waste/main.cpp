@@ -30,8 +30,8 @@ int main(int argc, char ** argv)
     Pa->Nt = 3000;// 正演的时间步数
     Pa->Nx = 510;// 横向的网格数
     Pa->Nz = 134;// 纵向网格数
-    Pa->PMLx = 100;// 横向NPML内的网格数
-    Pa->PMLz = 100;// 纵向NPML内的网格数
+    Pa->PMLx = 50;// 横向NPML内的网格数
+    Pa->PMLz = 50;// 纵向NPML内的网格数
     uint nnx = Pa->Nx + 2 * Pa->PMLx;
     uint nnz = Pa->Nz + 2 * Pa->PMLz;
 
