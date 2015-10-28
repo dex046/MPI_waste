@@ -45,8 +45,18 @@ OBJECTS_DIR   = ./
 
 ####### Files
 
-SOURCES       = ../MPI_waste/main.cpp 
-OBJECTS       = main.o
+SOURCES       = ../MPI_waste/main.cpp \
+		../MPI_waste/testmain.cpp \
+		../MPI_waste/Partition.cpp \
+		../MPI_waste/DataTran.cpp \
+		../MPI_waste/h_Coord.cpp \
+		../MPI_waste/Inside.cpp 
+OBJECTS       = main.o \
+		testmain.o \
+		Partition.o \
+		DataTran.o \
+		h_Coord.o \
+		Inside.o
 DIST          = ../../Qt5.3.2/5.3/gcc_64/mkspecs/features/spec_pre.prf \
 		../../Qt5.3.2/5.3/gcc_64/mkspecs/common/shell-unix.conf \
 		../../Qt5.3.2/5.3/gcc_64/mkspecs/common/unix.conf \
@@ -149,7 +159,12 @@ DIST          = ../../Qt5.3.2/5.3/gcc_64/mkspecs/features/spec_pre.prf \
 		../../Qt5.3.2/5.3/gcc_64/mkspecs/features/exceptions.prf \
 		../../Qt5.3.2/5.3/gcc_64/mkspecs/features/yacc.prf \
 		../../Qt5.3.2/5.3/gcc_64/mkspecs/features/lex.prf \
-		../MPI_waste/MPI_waste.pro ../MPI_waste/main.cpp
+		../MPI_waste/MPI_waste.pro ../MPI_waste/main.cpp \
+		../MPI_waste/testmain.cpp \
+		../MPI_waste/Partition.cpp \
+		../MPI_waste/DataTran.cpp \
+		../MPI_waste/h_Coord.cpp \
+		../MPI_waste/Inside.cpp
 QMAKE_TARGET  = MPI_waste
 DESTDIR       = #avoid trailing-slash linebreak
 TARGET        = MPI_waste
@@ -429,8 +444,45 @@ main.o: ../MPI_waste/main.cpp /usr/include/mpich-x86_64/mpi.h \
 		../MPI_waste/TDFWI.h \
 		../MPI_waste/RWsgy.h \
 		../MPI_waste/RWsgy.cpp \
-		../MPI_waste/TDFWI.cpp
+		../MPI_waste/TDFWI.cpp \
+		../MPI_waste/Partition.h \
+		../MPI_waste/testTDFWI.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o main.o ../MPI_waste/main.cpp
+
+testmain.o: ../MPI_waste/testmain.cpp /usr/include/mpich-x86_64/mpi.h \
+		/usr/include/mpich-x86_64/mpio.h \
+		/usr/include/mpich-x86_64/mpicxx.h \
+		../MPI_waste/testTDFWI.h \
+		../MPI_waste/RWsgy.h \
+		../MPI_waste/Partition.h \
+		../MPI_waste/RWsgy.cpp \
+		../MPI_waste/testTDFWI.cpp
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o testmain.o ../MPI_waste/testmain.cpp
+
+Partition.o: ../MPI_waste/Partition.cpp ../MPI_waste/Partition.h \
+		../MPI_waste/testTDFWI.h \
+		../MPI_waste/RWsgy.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o Partition.o ../MPI_waste/Partition.cpp
+
+DataTran.o: ../MPI_waste/DataTran.cpp /usr/include/mpich-x86_64/mpi.h \
+		/usr/include/mpich-x86_64/mpio.h \
+		/usr/include/mpich-x86_64/mpicxx.h \
+		../MPI_waste/DataTran.h \
+		../MPI_waste/Partition.h \
+		../MPI_waste/testTDFWI.h \
+		../MPI_waste/RWsgy.h \
+		../MPI_waste/TDFWI.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o DataTran.o ../MPI_waste/DataTran.cpp
+
+h_Coord.o: ../MPI_waste/h_Coord.cpp ../MPI_waste/Partition.h \
+		../MPI_waste/testTDFWI.h \
+		../MPI_waste/RWsgy.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o h_Coord.o ../MPI_waste/h_Coord.cpp
+
+Inside.o: ../MPI_waste/Inside.cpp ../MPI_waste/Partition.h \
+		../MPI_waste/testTDFWI.h \
+		../MPI_waste/RWsgy.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o Inside.o ../MPI_waste/Inside.cpp
 
 ####### Install
 

@@ -9,14 +9,15 @@
 
 * 作者：高照奇
 **************************************************************************/
-#include "mpi.h"
-#include "TDFWI.h"
-#include "RWsgy.h"
-#include "RWsgy.cpp"
-#include "TDFWI.cpp"
+//#include "mpi.h"
+//#include "TDFWI.h"
+//#include "RWsgy.h"
+//#include "RWsgy.cpp"
+//#include "TDFWI.cpp"
+//#include "Partition.h"
 
-using namespace std;
-
+//using namespace std;
+/*
 int main(int argc, char ** argv)
 {
     // 有限差分正演参数
@@ -167,6 +168,6 @@ int main(int argc, char ** argv)
     WriteData(InvertedVp, nnz, nnx, Pa->dz * 1000, ip->CurrVp, 0);
 
     return 0;
-}
+}*/
 
 

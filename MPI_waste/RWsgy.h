@@ -460,9 +460,9 @@ bool InfoOfSgy(char FileName[], REEL reel, unsigned short *TraceNum, unsigned sh
                unsigned short *SampleInt, short *DFormat, bool *BReel, bool *BIBM);
 
 /* 读Sgy中的数据*/
-bool ReadSgyData(char FileName[], Trace *trace, REEL reel, unsigned short *TraceNum,
-                 unsigned short *SampleNum, unsigned short *SampleInt, short *DFormat,
-                 bool *BReel, bool *BIBM);
+bool ReadSgyData(char FileName[], Trace *trace, REEL reel,
+                 unsigned short *SampleNum, short *DFormat,
+                 bool *BReel, bool *BIBM, const Partition &pt);
 
 /* 将数据写到Sgy文件中:写成微机格式，IEEE的浮点类型 */
 bool WriteSgy(char FileName[], unsigned char *f3200, Trace *trace, unsigned short TraceNum, unsigned short SampleNum,

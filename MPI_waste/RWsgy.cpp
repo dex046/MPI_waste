@@ -12,6 +12,7 @@
 */
 /************************************************************************/
 #include "RWsgy.h"
+#include "Partition.h"
 
 using namespace std;
 
@@ -225,9 +226,9 @@ bool InfoOfSgy(char FileName[], REEL reel, unsigned short *TraceNum, unsigned sh
 }
 
 /* 读取Sgy中的地震道数据 */
-bool ReadSgyData(char FileName[], Trace *trace, REEL reel, unsigned short *TraceNum,
-                 unsigned short *SampleNum, unsigned short *SampleInt, short *DFormat,
-                 bool *BReel, bool *BIBM)
+bool ReadSgyData(char FileName[], Trace *trace, REEL reel,
+                 unsigned short *SampleNum, short *DFormat,
+                 bool *BReel, bool *BIBM, const Partition &pt)
 {
     float *TempData1 = NULL;
     int *TempData2 = NULL;
@@ -235,26 +236,29 @@ bool ReadSgyData(char FileName[], Trace *trace, REEL reel, unsigned short *Trace
     double *TempData4 = NULL;
     unsigned char f3200[3200];
 
+    int length_x = pt.getblockLength_x();
+    int length_z = pt.getblockLength_z();
+
     // 根据文件中数据的存储形式来开辟空间
     if (*DFormat == 1 || *DFormat == 5)
     {
-        TempData1 = new float[*SampleNum];
-        memset((void *)TempData1, 0, sizeof(float) * *SampleNum);
+        TempData1 = new float[length_z];
+        memset((void *)TempData1, 0, sizeof(float) * length_z);//zhe li yong sizeof houmian que xie si le
     }
     else if (*DFormat == 2)
     {
-        TempData2 = new int[*SampleNum];
-        memset((void *)TempData2, 0, sizeof(int) * *SampleNum);
+        TempData2 = new int[length_z];
+        memset((void *)TempData2, 0, sizeof(int) * length_z);
     }
     else if (*DFormat == 3)
     {
-        TempData3 = new short[*SampleNum];
-        memset((void *)TempData3, 0, sizeof(short) * *SampleNum);
+        TempData3 = new short[length_z];
+        memset((void *)TempData3, 0, sizeof(short) * length_z);
     }
     else if (*DFormat == 4)
     {
-        TempData4 = new double[*SampleNum];
-        memset((void *)TempData4, 0, sizeof(double) * *SampleNum);
+        TempData4 = new double[length_z];
+        memset((void *)TempData4, 0, sizeof(double) * length_z);
     }
 
     FILE *fdata;
@@ -270,18 +274,20 @@ bool ReadSgyData(char FileName[], Trace *trace, REEL reel, unsigned short *Trace
         fread(&(reel).reelstruct, 400, 1, fdata);
     }
 
-    for (int i = 0; i < *TraceNum; i++)
+    int indexmin_x = pt.getindexmin_x();
+    int indexmin_z = pt.getindexmin_z();
+    for (int i = 0; i < length_x; i++)
     {
         // 读道头
         fread(&trace[i].head.h2, 2, 120, fdata);//h2 h4 headstruct
         // 如果是IBM的float
         if (*BIBM)
         {
-            for (int j = 0; j < 120; j++)
+            for (int j = 0; j < 120; j++)//120??
             {
                 if (j / 2 == 7 || j / 2 == 8 || j / 2 == 17 || (j >= 44 && j < 91))
                 {
-                    swap((short *)&trace[i].head.h2[j]);
+                    swap((short *)&trace[i + indexmin_z].head.h2[j]);
                 }
             }
             for (int j = 0; j < 60; j++)
@@ -289,13 +295,13 @@ bool ReadSgyData(char FileName[], Trace *trace, REEL reel, unsigned short *Trace
                 if (j == 7 || j == 8 || j == 17 || (j >= 22 && j < 46));
                 else
                 {
-                    swap(&trace[i].head.h4[j]);
+                    swap(&trace[i + indexmin_z].head.h4[j]);
                 }
             }
         }
 
-        trace[i].head.h2[114] = 0;// ?
-        if (trace[i].head.h2[57] != *SampleNum)
+        trace[i + indexmin_z].head.h2[114] = 0;// ?114
+        if (trace[i].head.h2[57] != *SampleNum)///
         {
             return false;
         }
@@ -303,8 +309,9 @@ bool ReadSgyData(char FileName[], Trace *trace, REEL reel, unsigned short *Trace
         // IBM float
         if (*DFormat == 1)
         {
-            fread(TempData1, 4, *SampleNum, fdata);
-            for (int ii = 0; ii < *SampleNum; ii++)
+            fseek(fdata, indexmin_x * 4, i * length_x);
+            fread(TempData1, 4, length_x, fdata);
+            for (int ii = 0; ii < length_x; ii++)
             {
                 if (*BIBM)
                 {
@@ -320,8 +327,8 @@ bool ReadSgyData(char FileName[], Trace *trace, REEL reel, unsigned short *Trace
         // 4字节，两互补整数
         else if (*DFormat == 2)
         {
-            fread(TempData2, 4, *SampleNum, fdata);
-            for (int ii = 0; ii < *SampleNum; ii++)
+            fread(TempData2, 4, length_x, fdata);
+            for (int ii = 0; ii < length_x; ii++)
             {
                 if (*BIBM)
                 {
@@ -334,8 +341,8 @@ bool ReadSgyData(char FileName[], Trace *trace, REEL reel, unsigned short *Trace
         // 两字节，两互补整数
         else if (*DFormat == 3)
         {
-            fread(TempData3, 2, *SampleNum, fdata);
-            for (int ii = 0; ii < *SampleNum; ii++)
+            fread(TempData3, 2, length_x, fdata);
+            for (int ii = 0; ii < length_x; ii++)
             {
                 if (*BIBM)
                 {
@@ -346,10 +353,10 @@ bool ReadSgyData(char FileName[], Trace *trace, REEL reel, unsigned short *Trace
         }
 
         // IEEE浮点
-        else if (*DFormat == 5)
+        else if (*DFormat == 5)///?? 5 ??
         {
-            fread(TempData1, 4, *SampleNum, fdata);
-            for (int ii = 0; ii < *SampleNum; ii++)
+            fread(TempData1, 4, length_x, fdata);
+            for (int ii = 0; ii < length_x; ii++)
             {
                 if (*BIBM)
                 {
@@ -362,7 +369,7 @@ bool ReadSgyData(char FileName[], Trace *trace, REEL reel, unsigned short *Trace
         // 无卷头
         else
         {
-            fread(trace[i].data, 4, *SampleNum, fdata);
+            fread(trace[i].data, 4, length_x, fdata);
         }
     }
 
@@ -382,7 +389,7 @@ bool ReadSgyData(char FileName[], Trace *trace, REEL reel, unsigned short *Trace
     }
     else if (*DFormat == 4)
     {
-        delete []TempData4;
+        delete []TempData4;//mei chu xian TempData4
     }
 
     return true;

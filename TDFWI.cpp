@@ -85,6 +85,9 @@ void ReadData(char FileName[],
 		SampleNum, SampleInt, DFormat,
 		&BReel, &BIBM);
 
+    cout << "TraceNum:  " << dec << *TraceNum << endl;
+    cout << "SampleNum:  " << dec << *SampleNum << endl;
+
 	Trace *trace;
 	trace = new Trace[*TraceNum];	
 	memset((void *)trace, 0, sizeof(Trace) * (*TraceNum));
@@ -100,9 +103,9 @@ void ReadData(char FileName[],
 		DFormat, &BReel, &BIBM);
 
 	// write the trace data to Data
-	for (n = 0; n < *TraceNum; n++)
+    for (n = 0; n < *TraceNum; n++)//610
 	{
-		for (m = 0; m < *SampleNum; m++)
+        for (m = 0; m < *SampleNum; m++)//234
 		{
 			if (flag == 0)
 			{
