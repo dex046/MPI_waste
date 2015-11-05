@@ -46,7 +46,7 @@ int main(int argc, char ** argv)
     ip->Alpha = 0.0f;
 
 
-    uint cpu_x = 2, cpu_z = 2;
+    uint cpu_x = 4, cpu_z = 2;
     Partition pt(Pa, ip, nnx, nnz, cpu_x, cpu_z, temph_U, temph_VW, 8, rank, p_size);//borderlength = 4
     //AFDPU2D &Pa, IP &ip, int totallength_x, int totallength_z, int sumblock_x, int sumblock_z, H_U h_U, H_VW h_VW, int rank, int size
     uint length_x = pt.getblockLength_x();
@@ -56,7 +56,6 @@ int main(int argc, char ** argv)
     uint indexmax_x = pt.getindexmax_x();
     uint indexmin_z = pt.getindexmin_z();
     uint indexmax_z = pt.getindexmax_z();
-
 
 
     ip->TrueVp = new float[length_x * length_z];

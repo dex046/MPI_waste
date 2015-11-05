@@ -1,23 +1,25 @@
-/******************************************
- * author:dwx
- * 2015.10.15
- ******************************************/
-#include "mpi.h"
-#include "testTDFWI.h"
-#include "RWsgy.h"
-#include "Partition.h"
+/**************************************************************************
+* 2维时间域全波形反演（Time domain Full Waveform Inversion）
 
+* 使用非分裂完全匹配曾（NPML）技术处理吸收边界
 
-using namespace std;
+* 使用2阶位移运动方程
 
+* 正演使用空间8阶时间2阶精度的交错网格有限差分技术
+
+* 作者：高照奇
+**************************************************************************/
+//#include "mpi.h"
+//#include "TDFWI.h"
+//#include "RWsgy.h"
+//#include "RWsgy.cpp"
+//#include "TDFWI.cpp"
+//#include "Partition.h"
+
+//using namespace std;
+/*
 int main(int argc, char ** argv)
 {
-    int rank, p_size;
-    MPI_Init(&argc, &argv);
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    MPI_Comm_size(MPI_COMM_WORLD, &p_size);
-
-
     // 有限差分正演参数
     AFDPU2D *Pa;
     Pa = new AFDPU2D[1];
@@ -34,9 +36,6 @@ int main(int argc, char ** argv)
     uint nnx = Pa->Nx + 2 * Pa->PMLx;
     uint nnz = Pa->Nz + 2 * Pa->PMLz;
 
-    H_Border temph_U(3, 3, 4, 4);//top left bottom right
-    H_Border temph_VW(4, 4, 3, 3);
-
     // 反演参数
     IP *ip;
     ip = new IP[1];
@@ -44,80 +43,62 @@ int main(int argc, char ** argv)
     ip->ShotN = 1;
     ip->IterN = 1;
     ip->Alpha = 0.0f;
-
-
-    uint cpu_x = 2, cpu_z = 2;
-    Partition pt(Pa, ip, nnx, nnz, cpu_x, cpu_z, temph_U, temph_VW, 8, rank, p_size);//borderlength = 4
-    //AFDPU2D &Pa, IP &ip, int totallength_x, int totallength_z, int sumblock_x, int sumblock_z, H_U h_U, H_VW h_VW, int rank, int size
-    uint length_x = pt.getblockLength_x();
-    uint length_z = pt.getblockLength_z();
-
-    uint indexmin_x = pt.getindexmin_x();
-    uint indexmax_x = pt.getindexmax_x();
-    uint indexmin_z = pt.getindexmin_z();
-    uint indexmax_z = pt.getindexmax_z();
-
-
-
-    ip->TrueVp = new float[length_x * length_z];
-    memset((void *)ip->TrueVp, 0, sizeof(float) * length_x * length_z);
-    ip->CurrVp = new float[length_x * length_z];
-    memset((void *)ip->CurrVp, 0, sizeof(float) * length_x * length_z);
-
-    uint inside_length_x = pt.getinteriorLength_x();
-    uint inside_length_z = pt.getinteriorLength_z();
-
+    ip->TrueVp = new float[nnz * nnx];
+    memset((void *)ip->TrueVp, 0, sizeof(float) * nnz * nnx);
+    ip->CurrVp = new float[nnz * nnx];
+    memset((void *)ip->CurrVp, 0, sizeof(float) * nnz * nnx);
     ip->GradVp = new float[Pa->Nz * Pa->Nx];
     memset((void *)ip->GradVp, 0, sizeof(float) * Pa->Nz * Pa->Nx);
     ip->ObjIter = new float[ip->IterN];
     memset((void *)ip->ObjIter, 0, sizeof(float) * ip->IterN);
-
+    ip->St = new Shot[ip->ShotN];
+    memset((void *)ip->St, 0, ip->ShotN * sizeof(Shot));
     // 炮信息
-    uint is_num = pt.getShot_num();
-
-    ip->St = new Shot[is_num];
-    memset((void *)ip->St, 0, is_num * sizeof(Shot));
-    for(uint i = 0; i < ip->ShotN; ++i)
+    for (uint is = 0; is < ip->ShotN; is++)
     {
-        ip->St[i].rn = 510;
-    }
+        ip->St[is].rn = 510;
+        ip->St[is].s.Sx = Pa->PMLx + is * 10 + 200;
+        ip->St[is].s.Sz = Pa->PMLz + 2;
+        ip->St[is].re = new RL[ip->St[is].rn];
+        memset((void *)ip->St[is].re, 0, sizeof(RL) * ip->St[is].rn);
 
+        // 检波器位置
+        for (uint m = 0; m < ip->St[is].rn; m++)
+        {
+            ip->St[is].re[m].Rx = Pa->PMLx + 1 * m;
+            ip->St[is].re[m].Rz = Pa->PMLz + 2;
+        }
+    }
     char TrueVp[] = "TrueVp-510-134-marmousi.sgy";
     char InitVp[] = "InitVp-510-134-marmousi.sgy";
     // 读取速度信息
-    ReadData(TrueVp, ip->TrueVp, pt, 0);
-    ReadData(InitVp, ip->CurrVp, pt, 0);
+    ReadData(TrueVp, ip->TrueVp, 0);
+    ReadData(InitVp, ip->CurrVp, 0);
 
     // 反演中使用到的全局变量
     CPUVs *plan;
     plan = new CPUVs[1];
     memset((void *)plan, 0, sizeof(CPUVs));
 
-    float *sgs_t = NULL, *sgs_c = NULL, *sgs_r = NULL;
-    if(is_num)
-    {
-        sgs_t = new float[ip->ShotN * Pa->Nt * ip->St[0].rn];// 反演中的炮数 * 正演的时间步数 * 检波器个数
-        memset((void *)sgs_t, 0,
-            sizeof(float) * ip->ShotN * Pa->Nt * ip->St[0].rn);
-        sgs_c = new float[ip->ShotN * Pa->Nt * ip->St[0].rn];
-        memset((void *)sgs_c, 0,
-            sizeof(float) * ip->ShotN * Pa->Nt * ip->St[0].rn);
-        sgs_r = new float[ip->ShotN * Pa->Nt * ip->St[0].rn];
-        memset((void *)sgs_r, 0,
-            sizeof(float) * ip->ShotN * Pa->Nt * ip->St[0].rn);
-    }
-
+    float *sgs_t, *sgs_c, *sgs_r;
+    sgs_t = new float[ip->ShotN * Pa->Nt * ip->St[0].rn];// 反演中的炮数 * 正演的时间步数 * 检波器个数
+    memset((void *)sgs_t, 0,
+        sizeof(float) * ip->ShotN * Pa->Nt * ip->St[0].rn);
+    sgs_c = new float[ip->ShotN * Pa->Nt * ip->St[0].rn];
+    memset((void *)sgs_c, 0,
+        sizeof(float) * ip->ShotN * Pa->Nt * ip->St[0].rn);
+    sgs_r = new float[ip->ShotN * Pa->Nt * ip->St[0].rn];
+    memset((void *)sgs_r, 0,
+        sizeof(float) * ip->ShotN * Pa->Nt * ip->St[0].rn);
 
     // 给全局变量开辟空间
-    MallocVariables(*Pa, ip, plan, pt);////
-
-
+    MallocVariables(*Pa, ip, plan);
 
     // 求取NPML的参数
-    GenerateNPML(*Pa, plan, pt);
+    GenerateNPML(*Pa, plan);
 
     // 给有效边界的坐标赋值
-    SetCoord(Pa, plan->h_Coord, pt);// h_Coord 有效边界存储策略需要存储的点的坐标
+    SetCoord(Pa, plan->h_Coord);// h_Coord 有效边界存储策略需要存储的点的坐标
     cout << "********************************************************************************************" << endl;
     cout << "Doing Time domain Full Waveform Inversion ..." << endl;
     cout << "Parameters of Inversion are as follows:" << endl;
@@ -141,7 +122,7 @@ int main(int argc, char ** argv)
 
 
 
-    CalTrueWF(*Pa, ip, plan, sgs_t, pt);//求取观测波场 plan  sgs_t
+    CalTrueWF(*Pa, ip, plan, sgs_t);//求取观测波场 plan  sgs_t
     duration = clock() - begin;
 
     cout << "\tCalculating the observed data used:\t" << duration / CLOCKS_PER_SEC << "s" << endl;
@@ -155,13 +136,13 @@ int main(int argc, char ** argv)
         cout << "\n\tDoing the " << It << "th iteration" << endl;
         cout << "\tCalculating the Gradient..." << endl;
         begin = clock();
-        CalGrad(*Pa, ip, plan, sgs_t, sgs_c, sgs_r, It, pt);
+        CalGrad(*Pa, ip, plan, sgs_t, sgs_c, sgs_r, It);
 
         // 梯度后处理
-        PostProcessGrad(*Pa, ip->GradVp, plan->h_Vp, pt);
+        PostProcessGrad(*Pa, ip->GradVp, plan->h_Vp);
 
         // 求取步长
-        CalStepLength(*Pa, ip, plan, sgs_t, sgs_c, e, pt);
+        CalStepLength(*Pa, ip, plan, sgs_t, sgs_c, e);
         duration = clock() - begin;
 
         cout << "\tObjective function value:\t" << ip->ObjIter[It] << endl;
@@ -169,8 +150,9 @@ int main(int argc, char ** argv)
         cout << "\tThe " << It << "th iteration used " << duration / CLOCKS_PER_SEC << "s" << endl;
 
         // 下一步迭代预处理
-        PreProcess(*Pa, ip, plan, pt);
+        PreProcess(*Pa, ip, plan);
     }
+
 
     cout << "\tWriting data to .sgy" << endl;
 
@@ -181,20 +163,11 @@ int main(int argc, char ** argv)
     sprintf(GradVp, "GradientVp.sgy");
     sprintf(InvertedVp, "InvertedVp.sgy");
 
-    //WriteData(TrueSg, (usht)Pa->Nt, (usht)ip->St[0].rn, (usht)(Pa->dt * 1000000), sgs_t, 1);
-    uint RL_num = pt.getRL_num();
-    if(RL_num)
-    {
-        write_sgs_t_Data(TrueSg, (usht)Pa->Nt, RL_num, (usht)(Pa->dt * 1000000), sgs_t, pt, *Pa, 1);
-    }
-
-    if(!pt.getiscoverbyNPML())
-    {
-        WriteData(GradVp, Pa->Nz, Pa->Nx, Pa->dz * 1000, ip->GradVp, pt, *Pa, 0, WRITE_INTER);
-    }
-    WriteData(InvertedVp, nnz, nnx, Pa->dz * 1000, ip->CurrVp, pt, *Pa, 0, WRITE_ALL);
+    WriteData(TrueSg, (usht)Pa->Nt, (usht)ip->St[0].rn, (usht)(Pa->dt * 1000000), sgs_t, 1);
+    WriteData(GradVp, Pa->Nz, Pa->Nx, Pa->dz * 1000, ip->GradVp, 0);
+    WriteData(InvertedVp, nnz, nnx, Pa->dz * 1000, ip->CurrVp, 0);
 
     return 0;
-}
+}*/
 
 
