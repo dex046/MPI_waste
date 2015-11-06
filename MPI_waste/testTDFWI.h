@@ -81,11 +81,11 @@ void ReadData(char FileName[],
             float *Data, const Partition &pt,
             usht flag);
 
-void write_sgs_t_Data(const char FileName[], usht SampleNum, usht TraceNum, usht SampleInt, float *data, const Partition &pt, const AFDPU2D &Pa, usht flag);
+void write_sgs_t_Data(const char * const FileName, usht SampleNum, usht TraceNum, usht SampleInt, float *data, const Partition &pt, const AFDPU2D &Pa, usht flag);
 
 
 // 将数据写入Sgy文件
-void WriteData(char FileName[],
+void WriteData(const char * const FileName,
             usht SampleNum,
             usht TraceNum,
             usht SampleInt,
@@ -163,14 +163,14 @@ void StepRecordU(AFDPU2D Pa,
                 uint *h_Coord,
                 uint RecNum,
                 float *h_U,
-                float *h_RU);
+                float *h_RU, const Partition &pt);
 
 // 一步替换有效边界内的波场
 void StepReplaceU(AFDPU2D Pa,
                 uint *h_Coord,
                 uint RecNum,
                 float *h_U,
-                float *h_RU);
+                float *h_RU, const Partition &pt);
 
 // 一步逆时间更新波场V和W
 void StepRtVW(AFDPU2D Pa,

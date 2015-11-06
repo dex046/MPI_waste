@@ -388,13 +388,32 @@ bool ReadSgyData(char FileName[], Trace *trace, REEL reel,
 }
 
 /* 将数据写到Sgy文件中:写成微机格式，IEEE的浮点类型 */
-bool WriteSgy(char FileName[], unsigned char *f3200, Trace *trace, unsigned short TraceNum, unsigned short SampleNum,
-              unsigned short SampleInt, const Partition &pt, const AFDPU2D &Pa, usht tag)
+bool WriteSgy(const char * const FileName, unsigned char *f3200, Trace *trace, unsigned short TraceNum, unsigned short SampleNum,
+              unsigned short SampleInt, const Partition &pt, const AFDPU2D &Pa, MPI_Offset filesize, usht tag)
 {
 //    FILE *fp;
 //    fp = fopen(FileName, "wb");
     MPI_File fh;
-    MPI_File_open(MPI_COMM_WORLD, FileName, MPI_MODE_RDWR, MPI_INFO_NULL, &fh);
+    MPI_File_open(MPI_COMM_WORLD, FileName, MPI_MODE_WRONLY, MPI_INFO_NULL, &fh);
+
+
+
+    MPI_Offset offset = 0;
+    MPI_Status status;
+
+    int rank = pt.getrank();
+    //MPI_Offset filesize;
+
+    if(rank == ROOT_ID)
+    {
+
+        MPI_File_set_size(fh, filesize);
+        MPI_File_get_size(fh, &filesize);
+        MPI_Barrier(MPI_COMM_WORLD);
+        cout << "filesize = " << filesize << endl;
+        MPI_Barrier(MPI_COMM_WORLD);
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
 
     int indexmin_x = 0;
     int indexmin_z = 0;
@@ -421,16 +440,22 @@ bool WriteSgy(char FileName[], unsigned char *f3200, Trace *trace, unsigned shor
     int block_x = pt.getblockLength_x();
     int block_z = pt.getblockLength_z();
 
-    int rank = pt.getrank();
 
-    MPI_Offset offset = 0;
-    MPI_Status status;
+
+
 
     // 写卷头前3200个字节
     if(rank == ROOT_ID)
     {
+//        MPI_Barrier(MPI_COMM_WORLD);
+//        cout << "rank = " << pt.getrank() << endl;
+//        MPI_Barrier(MPI_COMM_WORLD);
         //fwrite(&f3200[0], 3200, 1, fp);
+        MPI_Barrier(MPI_COMM_WORLD);
+        cout << "rank = " << pt.getrank() << endl;
+        MPI_Barrier(MPI_COMM_WORLD);
         MPI_File_write_at(fh, offset, &f3200[0], 3200, MPI_BYTE, &status);
+
         // 写卷头中400个字节
         REEL reel;
         reel.reelstruct.hns = SampleNum;
@@ -438,6 +463,9 @@ bool WriteSgy(char FileName[], unsigned char *f3200, Trace *trace, unsigned shor
         reel.reelstruct.format = 5; // IEEE float
         reel.reelstruct.mfeet = 1;
         //fwrite(&reel.reelstruct, 400, 1, fp);
+//        MPI_Barrier(MPI_COMM_WORLD);
+//        cout << "rank = " << pt.getrank() << endl;
+//        MPI_Barrier(MPI_COMM_WORLD);
         MPI_File_write_at(fh, offset + 3200, &reel, 400, MPI_BYTE, &status);
     }
 
@@ -453,6 +481,10 @@ bool WriteSgy(char FileName[], unsigned char *f3200, Trace *trace, unsigned shor
     {
 
     }
+
+//    MPI_Barrier(MPI_COMM_WORLD);
+//    cout << "rank = " << pt.getrank() << endl;
+//    MPI_Barrier(MPI_COMM_WORLD);
 
     // 写每一道数据
     for (int i = 0; i < block_x; i++)

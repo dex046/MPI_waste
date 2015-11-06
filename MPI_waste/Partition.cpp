@@ -3,6 +3,8 @@
  * 2015.10.15
  ******************************************/
 #include "Partition.h"
+#include <iostream>
+using namespace std;
 Partition::Partition()
 {
 }
@@ -25,9 +27,9 @@ Partition::Partition(const AFDPU2D *Pa, const IP *ip, uint totallength_x, uint t
     uint remainder_z = totallength_z % this->getsumBlock_z();
 
     this->indexmin_x = blockPosition_x * blockLength_x + (blockPosition_x <= remainder_x ? blockPosition_x : remainder_x);
-    this->indexmax_x = this->indexmin_x + blockLength_x + (blockPosition_x < remainder_x ? 1 : 0);
+    this->indexmax_x = this->indexmin_x + blockLength_x - 1 + (blockPosition_x < remainder_x ? 1 : 0);
     this->indexmin_z = blockPosition_z * blockLength_z + (blockPosition_z <= remainder_z ? blockPosition_z : remainder_z);
-    this->indexmax_z = this->indexmin_z + this->blockLength_z + (blockPosition_z < remainder_z ? 1 : 0);
+    this->indexmax_z = this->indexmin_z + this->blockLength_z - 1 + (blockPosition_z < remainder_z ? 1 : 0);
     
     this->interiormin_x = this->indexmin_x > Pa->PMLx ? this->indexmin_x : Pa->PMLx;
     this->interiormax_x = this->indexmax_x < Pa->PMLx + Pa->Nx - 1 ? this->indexmax_x : Pa->PMLx + Pa->Nx - 1;
@@ -43,6 +45,7 @@ Partition::Partition(const AFDPU2D *Pa, const IP *ip, uint totallength_x, uint t
         if(temp_x >= indexmin_x && temp_x <= indexmax_x && temp_z >= indexmin_z && temp_z <= indexmax_z)
         {
             this->shot.push_back({temp_x - indexmin_x, temp_z - indexmin_z});
+            //cout << rank << endl;
         }
     }
 
@@ -60,7 +63,8 @@ Partition::Partition(const AFDPU2D *Pa, const IP *ip, uint totallength_x, uint t
     seth_Vp_border(*Pa);
     setInside(*Pa);
     set_h_Coord(*Pa);
-
+    setRL(ip, Pa);
+//cout << rank << " : " << this->h_Coord_num << endl;
 //    this->insideLength_x = insidemax_x - insidemin_x;
 //    this->insideLength_z = insidemax_z - insidemin_z;
 
@@ -234,7 +238,7 @@ void Partition::setRL(const IP *ip, const AFDPU2D *Pa)
     //ip->St[is].rn = 510;
     this->RL_beginnum = INT_MAX;
     this->RL_endnum = INT_MIN;
-
+//cout << ip->St[0].rn << endl;
     for(uint is = 0; is < ip->ShotN; ++is)
     {
         for (uint m = 0; m < ip->St[is].rn; m++)
@@ -764,16 +768,17 @@ void Partition::set_h_Coord(AFDPU2D Pa)
     {
         this->h_Coord_num = 0;
         this->h_coord = NULL;
+
     }
     else if(this->indexmin_x < Pa.PMLx && this->indexmax_x >= Pa.PMLx)
     {
         if(this->indexmax_x < Pa.PMLx + Pa.Nx)
         {
             if(this->indexmax_z < Pa.PMLz)
-            {
+            {//cout << rank << endl;
                 this->h_Coord_num = 1;
                 H_Coord *coord = new H_Coord[this->h_Coord_num];
-                coord[0].indexmin_x = Pa.PMLz;
+                coord[0].indexmin_x = Pa.PMLx;
                 coord[0].indexmax_x = this->indexmax_x;
                 coord[0].indexmin_z = this->indexmin_z > Pa.PMLz - this->border_h_Coord ? this->indexmin_z : Pa.PMLz - this->border_h_Coord;
                 coord[0].indexmax_z = this->indexmax_z;
@@ -832,16 +837,16 @@ void Partition::set_h_Coord(AFDPU2D Pa)
                     this->h_coord = coord;
                 }
             }
-            else if(this->indexmin_z >= Pa.PMLz && this->indexmax_z > Pa.PMLz)
+            else if(this->indexmin_z >= Pa.PMLz && this->indexmin_z < Pa.PMLz + Pa.Nz)
             {
-                if(this->indexmin_z < Pa.PMLz + Pa.Nz)
+                if(this->indexmax_z < Pa.PMLz + Pa.Nz)
                 {
                     this->h_Coord_num = 1;
                     H_Coord *coord = new H_Coord[this->h_Coord_num];
-                    coord[0].indexmin_x = this->indexmin_x;
-                    coord[0].indexmax_x = this->indexmax_x;
-                    coord[0].indexmin_z = Pa.PMLz;
-                    coord[0].indexmax_z = this->indexmax_z < Pa.PMLz + Pa.Nz + this->border_h_Coord - 1 ? this->indexmax_z : Pa.PMLz + Pa.Nz + this->border_h_Coord - 1;
+                    coord[0].indexmin_x = this->indexmin_x > Pa.PMLx - this->border_h_Coord ? this->indexmin_x : Pa.PMLx - this->border_h_Coord;
+                    coord[0].indexmax_x = Pa.PMLx - 1;
+                    coord[0].indexmin_z = this->indexmin_z;
+                    coord[0].indexmax_z = this->indexmax_z;
                     coord[0].length_x = coord[0].indexmax_x - coord[0].indexmin_x + 1;
                     coord[0].length_z = coord[0].indexmax_z - coord[0].indexmin_z + 1;
 
@@ -849,7 +854,23 @@ void Partition::set_h_Coord(AFDPU2D Pa)
                 }
                 else
                 {
+                    this->h_Coord_num = 2;
+                    H_Coord *coord = new H_Coord[this->h_Coord_num];
+                    coord[0].indexmin_x = this->indexmin_x > Pa.PMLx - this->border_h_Coord ? this->indexmin_x : Pa.PMLx - this->border_h_Coord;
+                    coord[0].indexmax_x = Pa.PMLx - 1;
+                    coord[0].indexmin_z = this->indexmin_z;
+                    coord[0].indexmax_z = Pa.PMLz + Pa.Nz - 1;
+                    coord[0].length_x = coord[0].indexmax_x - coord[0].indexmin_x + 1;
+                    coord[0].length_z = coord[0].indexmax_z - coord[0].indexmin_z + 1;
 
+                    coord[1].indexmin_x = Pa.PMLx;
+                    coord[1].indexmax_x = this->indexmax_x;
+                    coord[1].indexmin_z = Pa.PMLz + Pa.Nz;
+                    coord[1].indexmax_z = this->indexmax_z < Pa.PMLz + Pa.Nz + this->border_h_Coord - 1 ? this->indexmax_z : Pa.Nz + Pa.PMLz + this->border_h_Coord - 1;;
+                    coord[1].length_x = coord[1].indexmax_x - coord[1].indexmin_x + 1;
+                    coord[1].length_z = coord[1].indexmax_z - coord[1].indexmin_z + 1;
+
+                    this->h_coord = coord;
                 }
             }
             else if(this->indexmin_z >= Pa.PMLz + Pa.Nz)
@@ -867,7 +888,7 @@ void Partition::set_h_Coord(AFDPU2D Pa)
             }
             else
             {
-
+//cout << rank << endl;
             }
         }
         else if(this->indexmax_x >= Pa.PMLx + Pa.Nx)
@@ -876,7 +897,7 @@ void Partition::set_h_Coord(AFDPU2D Pa)
             {
                 this->h_Coord_num = 1;
                 H_Coord *coord = new H_Coord[this->h_Coord_num];
-                coord[0].indexmin_x = Pa.PMLz;
+                coord[0].indexmin_x = Pa.PMLx;
                 coord[0].indexmax_x = Pa.PMLx + Pa.Nx - 1;
                 coord[0].indexmin_z = this->indexmin_z > Pa.PMLz - this->border_h_Coord ? this->indexmin_z : Pa.PMLz - this->border_h_Coord;
                 coord[0].indexmax_z = this->indexmax_z;
@@ -906,7 +927,7 @@ void Partition::set_h_Coord(AFDPU2D Pa)
                     coord[1].length_z = coord[1].indexmax_z - coord[1].indexmin_z + 1;
 
                     coord[2].indexmin_x = Pa.PMLx + Pa.Nx;
-                    coord[2].indexmax_x = this->indexmax_x;
+                    coord[2].indexmax_x = Pa.PMLx + Pa.Nx + this->border_h_Coord - 1 < this->indexmax_x ? Pa.Nx + Pa.PMLx + this->border_h_Coord - 1 : this->indexmax_x;///////
                     coord[2].indexmin_z = Pa.PMLz;
                     coord[2].indexmax_z = this->indexmax_z;
                     coord[2].length_x = coord[2].indexmax_x - coord[2].indexmin_x + 1;
@@ -940,7 +961,7 @@ void Partition::set_h_Coord(AFDPU2D Pa)
                     coord[2].length_z = coord[2].indexmax_z - coord[2].indexmin_z + 1;
 
                     coord[3].indexmin_x = Pa.PMLx;
-                    coord[3].indexmax_x = Pa.PMLx + Pa.Nx;
+                    coord[3].indexmax_x = Pa.PMLx + Pa.Nx - 1;
                     coord[3].indexmin_z = Pa.PMLz + Pa.Nz;
                     coord[3].indexmax_z = this->indexmax_z < Pa.PMLz + Pa.Nz + this->border_h_Coord - 1 ? this->indexmax_z : Pa.PMLz + Pa.Nz + this->border_h_Coord - 1;
                     coord[3].length_x = coord[3].indexmax_x - coord[3].indexmin_x + 1;
@@ -949,7 +970,7 @@ void Partition::set_h_Coord(AFDPU2D Pa)
                     this->h_coord = coord;
                 }
             }
-            else if(this->indexmin_z >= Pa.PMLz && this->indexmin_z < Pa.PMLz + Pa.Nz && this->indexmax_z > Pa.PMLz)
+            else if(this->indexmin_z >= Pa.PMLz && this->indexmin_z < Pa.PMLz + Pa.Nz)
             {
                 if(this->indexmax_z < Pa.PMLz + Pa.Nz)
                 {
@@ -963,7 +984,7 @@ void Partition::set_h_Coord(AFDPU2D Pa)
                     coord[0].length_z = coord[0].indexmax_z - coord[0].indexmin_z + 1;
 
                     coord[1].indexmin_x = Pa.PMLx + Pa.Nx;
-                    coord[1].indexmax_x = this->indexmax_x ;
+                    coord[1].indexmax_x = this->indexmax_x < Pa.PMLx + Pa.Nx + this->border_h_Coord - 1 ? this->indexmax_x : Pa.PMLx + Pa.Nx + this->border_h_Coord - 1;;
                     coord[1].indexmin_z = this->indexmin_z;
                     coord[1].indexmax_z = this->indexmax_z;
                     coord[1].length_x = coord[1].indexmax_x - coord[1].indexmin_x + 1;
@@ -978,7 +999,7 @@ void Partition::set_h_Coord(AFDPU2D Pa)
                     coord[0].indexmin_x = this->indexmin_x > Pa.PMLx - this->border_h_Coord ? this->indexmin_x : Pa.PMLx - this->border_h_Coord;
                     coord[0].indexmax_x = Pa.PMLx - 1;
                     coord[0].indexmin_z = this->indexmin_z;
-                    coord[0].indexmax_z = this->indexmax_z;
+                    coord[0].indexmax_z = Pa.Nz + Pa.PMLz - 1;
                     coord[0].length_x = coord[0].indexmax_x - coord[0].indexmin_x + 1;
                     coord[0].length_z = coord[0].indexmax_z - coord[0].indexmin_z + 1;
 
@@ -1014,7 +1035,7 @@ void Partition::set_h_Coord(AFDPU2D Pa)
             }
             else
             {
-
+//cout << rank << endl;
             }
         }
     }
@@ -1044,7 +1065,7 @@ void Partition::set_h_Coord(AFDPU2D Pa)
                     coord[0].indexmin_x = this->indexmin_x;
                     coord[0].indexmax_x = this->indexmax_x;
                     coord[0].indexmin_z = this->indexmin_z > Pa.PMLz - this->border_h_Coord ? this->indexmin_z : Pa.PMLz - this->border_h_Coord;
-                    coord[0].indexmax_z = this->indexmax_z;
+                    coord[0].indexmax_z = Pa.PMLz - 1;
                     coord[0].length_x = coord[0].indexmax_x - coord[0].indexmin_x + 1;
                     coord[0].length_z = coord[0].indexmax_z - coord[0].indexmin_z + 1;
 
@@ -1156,7 +1177,7 @@ void Partition::set_h_Coord(AFDPU2D Pa)
                     coord[1].indexmin_x = Pa.PMLx + Pa.Nx;
                     coord[1].indexmax_x = this->indexmax_x < Pa.PMLx + Pa.Nx + this->border_h_Coord - 1 ? this->indexmax_x : Pa.PMLx + Pa.Nx + this->border_h_Coord - 1;
                     coord[1].indexmin_z = Pa.PMLz;
-                    coord[1].indexmax_z = Pa.PMLz + Pa.Nz;
+                    coord[1].indexmax_z = Pa.PMLz + Pa.Nz - 1;
                     coord[1].length_x = coord[1].indexmax_x - coord[1].indexmin_x + 1;
                     coord[1].length_z = coord[1].indexmax_z - coord[1].indexmin_z + 1;
 
@@ -1170,12 +1191,48 @@ void Partition::set_h_Coord(AFDPU2D Pa)
                     this->h_coord = coord;
                 }
             }
+            else if(this->indexmin_z >= Pa.PMLz && this->indexmin_z < Pa.PMLz + Pa.Nz)
+            {
+                if(this->indexmax_z < Pa.PMLz + Pa.Nz)
+                {
+                    this->h_Coord_num = 1;
+                    H_Coord *coord = new H_Coord[this->h_Coord_num];
+                    coord[0].indexmin_x = Pa.PMLx + Pa.Nx;
+                    coord[0].indexmax_x = this->indexmax_x < Pa.PMLx + Pa.Nx + this->border_h_Coord - 1 ? this->indexmax_x : Pa.PMLx + Pa.Nx + this->border_h_Coord - 1;;
+                    coord[0].indexmin_z = this->indexmin_z;
+                    coord[0].indexmax_z = this->indexmax_z;
+                    coord[0].length_x = coord[0].indexmax_x - coord[0].indexmin_x + 1;
+                    coord[0].length_z = coord[0].indexmax_z - coord[0].indexmin_z + 1;
+
+                    this->h_coord = coord;
+                }
+                else
+                {
+                    this->h_Coord_num = 2;
+                    H_Coord *coord = new H_Coord[this->h_Coord_num];
+                    coord[0].indexmin_x = Pa.PMLx + Pa.Nx;
+                    coord[0].indexmax_x = this->indexmax_x < Pa.PMLx + Pa.Nx + this->border_h_Coord - 1 ? this->indexmax_x : Pa.PMLx + Pa.Nx + this->border_h_Coord - 1;;
+                    coord[0].indexmin_z = this->indexmin_z;
+                    coord[0].indexmax_z = Pa.PMLz + Pa.Nz - 1;
+                    coord[0].length_x = coord[0].indexmax_x - coord[0].indexmin_x + 1;
+                    coord[0].length_z = coord[0].indexmax_z - coord[0].indexmin_z + 1;
+
+                    coord[1].indexmin_x = this->indexmin_x;
+                    coord[1].indexmax_x = Pa.PMLx + Pa.Nx - 1;
+                    coord[1].indexmin_z = Pa.PMLz + Pa.Nz;
+                    coord[1].indexmax_z = this->indexmax_z < Pa.PMLz + Pa.Nz + this->border_h_Coord - 1 ? this->indexmax_z : Pa.PMLz + Pa.Nz + this->border_h_Coord - 1;
+                    coord[1].length_x = coord[1].indexmax_x - coord[1].indexmin_x + 1;
+                    coord[1].length_z = coord[1].indexmax_z - coord[1].indexmin_z + 1;
+
+                    this->h_coord = coord;
+                }
+            }
             else if(this->indexmin_z >= Pa.PMLz + Pa.Nz)
             {
                 this->h_Coord_num = 1;
                 H_Coord *coord = new H_Coord[this->h_Coord_num];
                 coord[0].indexmin_x = this->indexmin_x;
-                coord[0].indexmax_x = Pa.PMLx + Pa.Nx;
+                coord[0].indexmax_x = Pa.PMLx + Pa.Nx - 1;
                 coord[0].indexmin_z = this->indexmin_z;
                 coord[0].indexmax_z = this->indexmax_z < Pa.PMLz + Pa.Nz + this->border_h_Coord - 1 ? this->indexmax_z : Pa.PMLz + Pa.Nz + this->border_h_Coord - 1;
                 coord[0].length_x = coord[0].indexmax_x - coord[0].indexmin_x + 1;
@@ -1200,7 +1257,7 @@ void Partition::set_h_Coord(AFDPU2D Pa)
         coord[0].indexmin_x = this->indexmin_x;
         coord[0].indexmax_x = this->indexmax_x < Pa.PMLx + Pa.Nx + this->border_h_Coord - 1 ? this->indexmax_x : Pa.PMLx + Pa.Nx + this->border_h_Coord - 1;
         coord[0].indexmin_z = this->indexmin_z > Pa.PMLx ? this->indexmin_z : Pa.PMLx;
-        coord[0].indexmax_z = this->indexmax_z < Pa.PMLz + Pa.Nz + this->border_h_Coord - 1 ? this->indexmax_z : Pa.PMLz + Pa.Nz + this->indexmax_z;
+        coord[0].indexmax_z = this->indexmax_z < Pa.PMLz + Pa.Nz - 1 ? this->indexmax_z : Pa.PMLz + Pa.Nz - 1;
         coord[0].length_x = coord[0].indexmax_x - coord[0].indexmin_x + 1;
         coord[0].length_z = coord[0].indexmax_z - coord[0].indexmin_z + 1;
 

@@ -134,21 +134,36 @@ void ReadData(char FileName[],
     delete []SampleNum;
 
 }
-void write_sgs_t_Data(const char FileName[], usht SampleNum, usht TraceNum, usht SampleInt, float *data, const Partition &pt, const AFDPU2D &Pa, usht flag)
+void write_sgs_t_Data(const char * const FileName, usht SampleNum, usht TraceNum, usht SampleInt, float *data, const Partition &pt, const AFDPU2D &Pa, usht flag)
 {
     unsigned char f3200[3200];
+    memset((void*)f3200, 0, 3200);
     uint m, n;
 
+    uint RL_num = pt.getRL_num();
     Trace *trace;
-    trace = new Trace[TraceNum];
-    memset((void *)trace, 0, sizeof(Trace) * TraceNum);
+    trace = new Trace[RL_num];
+    memset((void *)trace, 0, sizeof(Trace) * RL_num);
 
     int begin_num = pt.getRL_beginnum();
     int end_num = pt.getRL_endnum();
 
     int rank = pt.getrank();
 
-    for (int n = 0; n < TraceNum; n++)
+    MPI_File fh;
+    MPI_File_open(MPI_COMM_WORLD, FileName, MPI_MODE_WRONLY, MPI_INFO_NULL, &fh);
+
+    MPI_Offset offset = 0;
+    MPI_Status status;
+
+    if(rank == ROOT_ID)
+    {
+        MPI_Offset filesize = 3200 + (SampleNum * sizeof(float) + 240) * TraceNum;
+        MPI_File_set_size(fh, filesize);
+
+    }
+
+    for (int n = 0; n < RL_num; n++)
     {
         trace[n].data = new float[SampleNum];
         memset((void *)trace[n].data, 0, sizeof(float) * SampleNum);
@@ -156,7 +171,7 @@ void write_sgs_t_Data(const char FileName[], usht SampleNum, usht TraceNum, usht
         {
             if (flag == 0)
             {
-                trace[n].data[m] = *(data + m * TraceNum + n);
+                trace[n].data[m] = *(data + m * RL_num + n);
             }
             else
             {
@@ -166,7 +181,7 @@ void write_sgs_t_Data(const char FileName[], usht SampleNum, usht TraceNum, usht
     }
 
     // trace header
-    for (n = 0; n < TraceNum; n++)
+    for (n = 0; n < RL_num; n++)
     {
         for (int m = 0; m < 60; m++)
         {
@@ -183,16 +198,14 @@ void write_sgs_t_Data(const char FileName[], usht SampleNum, usht TraceNum, usht
         }
     }
 
-    MPI_File fh;
-    MPI_File_open(MPI_COMM_WORLD, FileName, MPI_MODE_RDWR, MPI_INFO_NULL, &fh);
 
-    MPI_Offset offset = 0;
-    MPI_Status status;
 
     if(rank == ROOT_ID)
     {
         //fwrite(&f3200[0], 3200, 1, fp);
+        cout << "bbbbbb" << rank << "bbbbbbb" << endl;
         MPI_File_write_at(fh, offset, &f3200[0], 3200, MPI_BYTE, &status);
+        cout << "oooooo" << rank << "ooooooo" << endl;
         // 写卷头中400个字节
         REEL reel;
         reel.reelstruct.hns = SampleNum;
@@ -208,7 +221,7 @@ void write_sgs_t_Data(const char FileName[], usht SampleNum, usht TraceNum, usht
 //    WriteSgy(FileName, &f3200[0], trace,
 //        TraceNum, SampleNum, SampleInt, Pa, pt);///hai
 
-    for (int i = 0; i < TraceNum; i++)
+    for (int i = 0; i < RL_num; i++)
     {
         // 写道头
         if(pt.isfirstblock_z())
@@ -231,7 +244,7 @@ void write_sgs_t_Data(const char FileName[], usht SampleNum, usht TraceNum, usht
     MPI_File_close(&fh);
 
     // free memory
-    for (n = 0; n < TraceNum; n++)
+    for (n = 0; n < RL_num; n++)
     {
         delete []trace[n].data;
     }
@@ -251,9 +264,9 @@ TraceNum: number of traces
 SampleInt: sample interval
 data: output data
 ------------------------------------------------------------------------*/
-void WriteData(char FileName[],
-            usht SampleNum,//nnz 234
-            usht TraceNum,//nnx 610
+void WriteData(const char * const FileName,
+            usht SampleNum, //nnz 234
+            usht TraceNum, //nnx 610
             usht SampleInt,
             float *data,
             const Partition& pt,
@@ -262,8 +275,10 @@ void WriteData(char FileName[],
             usht tag)
 {
     unsigned char f3200[3200];
+    memset((void*)f3200, 0, 3200);
     uint m, n;
 
+    MPI_Offset filesize = (SampleNum * sizeof(float) + 240) * TraceNum + 3200;
 
     int indexmin_x = pt.getindexmin_x();
     int indexmin_z = pt.getindexmin_z();
@@ -275,6 +290,9 @@ void WriteData(char FileName[],
     {
         block_x = pt.getinteriorLength_x();
         block_z = pt.getinteriorLength_z();
+
+        if(!block_x || !block_z)
+            return;
     }
     else if(tag == WRITE_ALL)
     {
@@ -285,6 +303,8 @@ void WriteData(char FileName[],
     {
 
     }
+
+
 
     Trace *trace;
     trace = new Trace[block_x];
@@ -328,8 +348,11 @@ void WriteData(char FileName[],
         }
     }
 
+
+//cout << rank << "oooppppp" << endl;
     WriteSgy(FileName, &f3200[0], trace,
-        TraceNum, SampleNum, SampleInt, pt, Pa, tag);///hai
+        TraceNum, SampleNum, SampleInt, pt, Pa, filesize, tag);///hai
+
 
     // free memory
     for (n = 0; n < block_x; n++)
@@ -384,53 +407,78 @@ void MallocVariables(AFDPU2D Pa,
 //        PMLlength_z += ins[i].getlength_z();
 //    }
 
-    // 申请变量// 与NPML有关的变量
-    plan->h_dx = new float[block_x];
-    plan->h_dz = new float[block_z];
-    plan->h_Bx = new float[block_x];
-    plan->h_Bz = new float[block_z];
-    plan->h_PHIx_V_x = new float[block_z * block_x];
-    plan->h_PHIz_W_z = new float[block_z * block_x];
-    plan->h_PHIx_U_x = new float[block_z * block_x];//h_U right 4, left 3, seft 1
-    plan->h_PHIz_U_z = new float[block_z * block_x];//h_U top 3, bottom 4, seft 1
-    plan->h_PHIx_V_x_r = new float[block_z * block_x];//h_V left 4, right 3, seft 1
-    plan->h_PHIz_W_z_r = new float[block_z * block_x];//h_W top 4, bottom 3, seft 1
-    plan->h_PHIx_U_x_r = new float[block_z * block_x];
-    plan->h_PHIz_U_z_r = new float[block_z * block_x];
-    // 波场相关变量
-    plan->h_U_past = new float[block_z * block_x];//h_V left 4, right 3, h_W top 4, bottom 3
-    plan->h_U_now = new float[h_U.length_z * h_U.length_x];
-    plan->h_U_next = new float[block_z * block_x];//h_V left 4, right 3, h_W top 4, bottom 3
-    plan->h_U_past_r = new float[block_z * block_x];
-    plan->h_U_now_r = new float[h_U.length_z * h_U.length_x];
-    plan->h_U_next_r = new float[block_z * block_x];
-    plan->h_V = new float[block_z * h_VW.length_x];//h_U left 3, right 4
-    plan->h_W = new float[h_VW.length_z * block_x];//h_U top 3, bottom 4
-    plan->h_V_r = new float[block_z * h_VW.length_x];
-    plan->h_W_r = new float[h_VW.length_z * block_x];
-    plan->h_Vp = new float[h_Vp.length_z * h_Vp.length_x];
-    plan->h_re = new RL[ip->St[0].rn];
-
-
-    if(RL_num)
-    {
-        plan->h_TrueWF = new float[RL_num * Pa.Nt];
-        plan->h_CurrWF = new float[RL_num * Pa.Nt];
-        plan->h_ResWF = new float[RL_num * Pa.Nt];
-    }
-
-
-    plan->h_Grad = new float[interiorlength_z * interiorlength_x];//Pa.Nz * Pa.Nx
-    plan->h_U_Der = new float[interiorlength_z * interiorlength_x];//Pa.Nz * Pa.Nx
 
     uint sum_h_Coord = pt.geth_Coord_length();
-    plan->h_Coord = new uint[sum_h_Coord];
-    plan->h_RU = new float[sum_h_Coord * (Pa.Nt - 1)];
-    plan->h_Obj = new float[RL_num * Pa.Nt];
-    // 计算步长的相关变量
-    plan->h_TrailWF = new float[RL_num * Pa.Nt];
-    plan->h_SumResTrial = new float[RL_num * Pa.Nt];
-    plan->h_SumResCurr = new float[RL_num * Pa.Nt];
+//    MPI_Barrier(MPI_COMM_WORLD);
+//    cout << pt.getrank() << " = " << sum_h_Coord << endl;
+//    MPI_Barrier(MPI_COMM_WORLD);
+    try
+    {
+        // 申请变量// 与NPML有关的变量
+        plan->h_dx = new float[block_x];
+        plan->h_dz = new float[block_z];
+        plan->h_Bx = new float[block_x];
+        plan->h_Bz = new float[block_z];
+        plan->h_PHIx_V_x = new float[block_z * block_x];
+        plan->h_PHIz_W_z = new float[block_z * block_x];
+        plan->h_PHIx_U_x = new float[block_z * block_x];//h_U right 4, left 3, seft 1
+        plan->h_PHIz_U_z = new float[block_z * block_x];//h_U top 3, bottom 4, seft 1
+        plan->h_PHIx_V_x_r = new float[block_z * block_x];//h_V left 4, right 3, seft 1
+        plan->h_PHIz_W_z_r = new float[block_z * block_x];//h_W top 4, bottom 3, seft 1
+        plan->h_PHIx_U_x_r = new float[block_z * block_x];
+        plan->h_PHIz_U_z_r = new float[block_z * block_x];
+        // 波场相关变量
+        plan->h_U_past = new float[block_z * block_x];//h_V left 4, right 3, h_W top 4, bottom 3
+        plan->h_U_now = new float[h_U.length_z * h_U.length_x];
+        plan->h_U_next = new float[block_z * block_x];//h_V left 4, right 3, h_W top 4, bottom 3
+        plan->h_U_past_r = new float[block_z * block_x];
+        plan->h_U_now_r = new float[h_U.length_z * h_U.length_x];
+        plan->h_U_next_r = new float[block_z * block_x];
+        plan->h_V = new float[block_z * h_VW.length_x];//h_U left 3, right 4
+        plan->h_W = new float[h_VW.length_z * block_x];//h_U top 3, bottom 4
+        plan->h_V_r = new float[block_z * h_VW.length_x];
+        plan->h_W_r = new float[h_VW.length_z * block_x];
+        plan->h_Vp = new float[h_Vp.length_z * h_Vp.length_x];
+
+
+
+        if(RL_num)
+        {
+            plan->h_TrueWF = new float[RL_num * Pa.Nt];
+            plan->h_CurrWF = new float[RL_num * Pa.Nt];
+            plan->h_ResWF = new float[RL_num * Pa.Nt];
+            //plan->h_re = new RL[RL_num];
+
+            plan->h_Obj = new float[RL_num * Pa.Nt];
+            // 计算步长的相关变量
+            plan->h_TrailWF = new float[RL_num * Pa.Nt];
+            plan->h_SumResTrial = new float[RL_num * Pa.Nt];
+            plan->h_SumResCurr = new float[RL_num * Pa.Nt];
+        }
+
+
+        if(interiorlength_x || interiorlength_z)
+        {
+            plan->h_Grad = new float[interiorlength_z * interiorlength_x];//Pa.Nz * Pa.Nx
+            plan->h_U_Der = new float[interiorlength_z * interiorlength_x];//Pa.Nz * Pa.Nx
+
+        }
+
+
+        if(sum_h_Coord)
+        {
+
+            plan->h_Coord = new uint[sum_h_Coord];
+            plan->h_RU = new float[sum_h_Coord * (Pa.Nt - 1)];
+
+        }
+
+
+    }
+    catch(const std::bad_alloc& e)
+    {
+        cout << "Allocation failed: www   " << e.what() << endl;
+    }
 
     // 初始化空间
     memset((void *)plan->h_dx,			0,	sizeof(float) * block_x);
@@ -457,20 +505,40 @@ void MallocVariables(AFDPU2D Pa,
     memset((void *)plan->h_V_r,			0,	sizeof(float) * block_z * h_VW.length_x);
     memset((void *)plan->h_W_r,			0,	sizeof(float) * h_VW.length_z * block_x);
     memset((void *)plan->h_Vp,			0,	sizeof(float) * h_Vp.length_z * h_Vp.length_x);
-    memset((void *)plan->h_re,			0,	sizeof(RL) * ip->St[0].rn);
 
-    memset((void *)plan->h_TrueWF,		0,	sizeof(float) * ip->St[0].rn * Pa.Nt);
-    memset((void *)plan->h_CurrWF,		0,	sizeof(float) * ip->St[0].rn * Pa.Nt);
-    memset((void *)plan->h_ResWF,		0,	sizeof(float) * ip->St[0].rn * Pa.Nt);
 
-    memset((void *)plan->h_Grad,		0,	sizeof(float) * interiorlength_z * interiorlength_x);
-    memset((void *)plan->h_U_Der,		0,	sizeof(float) * interiorlength_z * interiorlength_x);
-    memset((void *)plan->h_Coord,		0,	sizeof(uint) * sum_h_Coord);
-    memset((void *)plan->h_RU,			0,	sizeof(uint) * sum_h_Coord * (Pa.Nt - 1));
-    memset((void *)plan->h_Obj,			0,	sizeof(float) * RL_num * Pa.Nt);
-    memset((void *)plan->h_TrailWF,		0,	sizeof(float) * RL_num * Pa.Nt);
-    memset((void *)plan->h_SumResTrial,	0,	sizeof(float) * RL_num * Pa.Nt);
-    memset((void *)plan->h_SumResCurr,	0,	sizeof(float) * RL_num * Pa.Nt);
+    if(RL_num)
+    {
+        memset((void *)plan->h_TrueWF,		0,	sizeof(float) * RL_num * Pa.Nt);
+        memset((void *)plan->h_CurrWF,		0,	sizeof(float) * RL_num * Pa.Nt);
+        memset((void *)plan->h_ResWF,		0,	sizeof(float) * RL_num * Pa.Nt);
+        //memset((void *)plan->h_re,			0,	sizeof(RL) * RL_num);
+
+        memset((void *)plan->h_Obj,			0,	sizeof(float) * RL_num * Pa.Nt);
+        memset((void *)plan->h_TrailWF,		0,	sizeof(float) * RL_num * Pa.Nt);
+        memset((void *)plan->h_SumResTrial,	0,	sizeof(float) * RL_num * Pa.Nt);
+        memset((void *)plan->h_SumResCurr,	0,	sizeof(float) * RL_num * Pa.Nt);
+    }
+
+    if(interiorlength_x || interiorlength_z)
+    {
+        memset((void *)plan->h_Grad,		0,	sizeof(float) * interiorlength_z * interiorlength_x);
+        memset((void *)plan->h_U_Der,		0,	sizeof(float) * interiorlength_z * interiorlength_x);
+    }
+
+
+    if(sum_h_Coord)
+    {
+        memset((void *)plan->h_Coord,		0,	sizeof(uint) * sum_h_Coord);
+
+        memset((void *)plan->h_RU,			0,	sizeof(float) * sum_h_Coord * (Pa.Nt - 1));
+        //cout << pt.getrank() << endl;
+    }
+
+
+
+
+
 }
 
 
@@ -647,22 +715,47 @@ void StepPHIU(AFDPU2D Pa,
     uint totallength_x = pt.gettotallength_x();
     uint totallength_z = pt.gettotallength_z();
 
+    uint block_x = pt.getblockLength_x();
+    uint block_z = pt.getblockLength_z();
+
     int min_x = pt.getindexmin_x();
     int min_z = pt.getindexmin_z();
+
+    int max_x = pt.getindexmax_x();
+    int max_z = pt.getindexmax_z();
 
     float dUx = 0.0f;
     float dUz = 0.0f;
 
+    int gap_min_x = 0, gap_min_z = 0, gap_max_x = 0, gap_max_z = 0;
+    if(min_x < 3)
+    {
+        gap_min_x = 3 - min_x;
+    }
+    if(min_z < 3)
+    {
+        gap_min_z = 3 - min_z;
+    }
+    if(max_x > totallength_x - 5)
+    {
+        gap_max_x = totallength_x - 5 - max_x;
+    }
+    if(max_z > totallength_z - 5)
+    {
+        gap_max_z = totallength_z - 5 - max_z;
+    }
+
     // 交错网格有限差分
     //yuan cheng xu li cong 4 kai shi,zhe li ye shi cong 4 kai shi
-    for (uint iz = (temph_U.topborder > 4 - min_z + temph_U.topborder ? temph_U.topborder : 4 - min_z + temph_U.topborder); iz < totallength_z - temph_U.bottomborder - min_z; iz++)
+    for (uint iz = 0 + gap_min_z + temph_U.topborder; iz < block_z + gap_max_x; ++iz)
     {
-        for (uint ix = (temph_U.leftborder > 4 - min_x + temph_U.leftborder ? temph_U.leftborder : 4 - min_x + temph_U.leftborder); ix < totallength_x - temph_U.bottomborder - min_z; ix++)
+        for (uint ix = 0 + gap_min_x + temph_U.leftborder; ix < block_x + gap_max_z; ix++)
         {
-            dUx = C1_4 * (h_U[iz * temph_U.length_x + ix + 1] - h_U[iz * temph_U.length_x + ix])
-                + C2_4 * (h_U[iz * temph_U.length_x + ix + 2] - h_U[iz * temph_U.length_x + ix - 1])
-                + C3_4 * (h_U[iz * temph_U.length_x + ix + 3] - h_U[iz * temph_U.length_x + ix - 2])
-                + C4_4 * (h_U[iz * temph_U.length_x + ix + 4] - h_U[iz * temph_U.length_x + ix - 3]);
+            //cout << "rank = " << pt.getrank() << ",iz = " << iz << ",ix = " << ix << endl;
+            dUx = C1_4 * (h_U[(iz + temph_U.topborder) * temph_U.length_x + ix + 1] - h_U[(iz + temph_U.topborder) * temph_U.length_x + ix])
+                + C2_4 * (h_U[(iz + temph_U.topborder) * temph_U.length_x + ix + 2] - h_U[(iz + temph_U.topborder) * temph_U.length_x + ix - 1])
+                + C3_4 * (h_U[(iz + temph_U.topborder) * temph_U.length_x + ix + 3] - h_U[(iz + temph_U.topborder) * temph_U.length_x + ix - 2])
+                + C4_4 * (h_U[(iz + temph_U.topborder) * temph_U.length_x + ix + 4] - h_U[(iz + temph_U.topborder) * temph_U.length_x + ix - 3]);
             dUz = C1_4 * (h_U[(iz + 1) * temph_U.length_x + ix] - h_U[iz * temph_U.length_x + ix])
                 + C2_4 * (h_U[(iz + 2) * temph_U.length_x + ix] - h_U[(iz - 1) * temph_U.length_x + ix])
                 + C3_4 * (h_U[(iz + 3) * temph_U.length_x + ix] - h_U[(iz - 2) * temph_U.length_x + ix])
@@ -674,6 +767,10 @@ void StepPHIU(AFDPU2D Pa,
                 h_Bz[iz] * (h_PHIz_U_z[iz * temph_U.length_x + ix] + dUz / Pa.dz) - dUz / Pa.dz;
         }
     }
+
+//    MPI_Barrier(MPI_COMM_WORLD);
+//    cout << pt.getrank() << endl;
+//    MPI_Barrier(MPI_COMM_WORLD);
 }
 
 /*------------------------------------------------------------------------
@@ -702,7 +799,7 @@ void StepPHIVW(AFDPU2D Pa,
 {
 //    uint nnx = Pa.Nx + 2 * Pa.PMLx;
 //    uint nnz = Pa.Nz + 2 * Pa.PMLz;
-    H_Border temph_U = pt.geth_U();
+    H_Border h_VW = pt.geth_VW();
 //    int top_border = pt.geth_W_topborder();
 //    int bottom_border = pt.geth_W_bottomborder();
 //    int left_border = pt.geth_V_leftborder();
@@ -711,32 +808,56 @@ void StepPHIVW(AFDPU2D Pa,
     uint totallength_x = pt.gettotallength_x();
     uint totallength_z = pt.gettotallength_z();
 
+    uint block_x = pt.getblockLength_x();
+    uint block_z = pt.getblockLength_z();
+
     //uint length_x = pt.getblockLength_x() + left_border + right_border;
     //uint length_z = pt.getblockLength_z() + top_border + bottom_border;
     int min_x = pt.getindexmin_x();
     int min_z = pt.getindexmin_z();
 
+    int max_x = pt.getindexmax_x();
+    int max_z = pt.getindexmax_z();
+
+    int gap_min_x = 0, gap_min_z = 0, gap_max_x = 0, gap_max_z = 0;
+    if(min_x < 4)
+    {
+        gap_min_x = 4 - min_x;
+    }
+    if(min_z < 4)
+    {
+        gap_min_z = 4 - min_z;
+    }
+    if(max_x > totallength_x - 4)
+    {
+        gap_max_x = totallength_x - 4 - max_x;
+    }
+    if(max_z > totallength_z - 4)
+    {
+        gap_max_z = totallength_z - 4 - max_z;
+    }
+
     float dVx = 0.0f;
     float dWz = 0.0f;
 
     // 交错网格有限差分
-    for (uint iz = (temph_U.topborder > 4 - min_z + temph_U.topborder ? temph_U.topborder : 4 - min_z + temph_U.topborder); iz < totallength_z - temph_U.bottomborder - min_z; iz++)
+    for (uint iz = 0 + gap_min_z + h_VW.topborder; iz < block_z + gap_max_x; ++iz)
     {
-        for (uint ix = (temph_U.leftborder > 4 - min_x + temph_U.leftborder ? temph_U.leftborder : 4 - min_x + temph_U.leftborder); ix < totallength_x - temph_U.rightborder - min_z; ix++)
+        for (uint ix = 0 + gap_min_x + h_VW.leftborder; ix < block_x + gap_max_z; ix++)
         {
-            dVx = C1_4 * (h_V[iz * temph_U.length_x + ix] - h_V[iz * temph_U.length_x + ix - 1])
-                + C2_4 * (h_V[iz * temph_U.length_x + ix + 1] - h_V[iz * temph_U.length_x + ix - 2])
-                + C3_4 * (h_V[iz * temph_U.length_x + ix + 2] - h_V[iz * temph_U.length_x + ix - 3])
-                + C4_4 * (h_V[iz * temph_U.length_x + ix + 3] - h_V[iz * temph_U.length_x + ix - 4]);
-            dWz = C1_4 * (h_W[iz * temph_U.length_x + ix] - h_W[(iz - 1) * temph_U.length_x + ix])
-                + C2_4 * (h_W[(iz + 1) * temph_U.length_x + ix] - h_W[(iz - 2) * temph_U.length_x + ix])
-                + C3_4 * (h_W[(iz + 2) * temph_U.length_x + ix] - h_W[(iz - 3) * temph_U.length_x + ix])
-                + C4_4 * (h_W[(iz + 3) * temph_U.length_x + ix] - h_W[(iz - 4) * temph_U.length_x + ix]);
+            dVx = C1_4 * (h_V[iz * h_VW.length_x + ix] - h_V[iz * h_VW.length_x + ix - 1])
+                + C2_4 * (h_V[iz * h_VW.length_x + ix + 1] - h_V[iz * h_VW.length_x + ix - 2])
+                + C3_4 * (h_V[iz * h_VW.length_x + ix + 2] - h_V[iz * h_VW.length_x + ix - 3])
+                + C4_4 * (h_V[iz * h_VW.length_x + ix + 3] - h_V[iz * h_VW.length_x + ix - 4]);
+            dWz = C1_4 * (h_W[iz * h_VW.length_x + ix] - h_W[(iz - 1) * h_VW.length_x + ix])
+                + C2_4 * (h_W[(iz + 1) * h_VW.length_x + ix] - h_W[(iz - 2) * h_VW.length_x + ix])
+                + C3_4 * (h_W[(iz + 2) * h_VW.length_x + ix] - h_W[(iz - 3) * h_VW.length_x + ix])
+                + C4_4 * (h_W[(iz + 3) * h_VW.length_x + ix] - h_W[(iz - 4) * h_VW.length_x + ix]);
 
-            h_PHIx_V_x[iz * temph_U.length_x + ix] =
-                h_Bx[ix] * (h_PHIx_V_x[iz * temph_U.length_x + ix] + dVx / Pa.dx) - dVx / Pa.dx;
-            h_PHIz_W_z[iz * temph_U.length_x + ix] =
-                h_Bz[iz] * (h_PHIz_W_z[iz * temph_U.length_x + ix] + dWz / Pa.dz) - dWz / Pa.dz;
+            h_PHIx_V_x[iz * h_VW.length_x + ix] =
+                h_Bx[ix] * (h_PHIx_V_x[iz * h_VW.length_x + ix] + dVx / Pa.dx) - dVx / Pa.dx;
+            h_PHIz_W_z[iz * h_VW.length_x + ix] =
+                h_Bz[iz] * (h_PHIz_W_z[iz * h_VW.length_x + ix] + dWz / Pa.dz) - dWz / Pa.dz;
         }
     }
 }
@@ -784,18 +905,42 @@ void StepU(AFDPU2D Pa,
     uint totallength_x = pt.gettotallength_x();
     uint totallength_z = pt.gettotallength_z();
 
+    uint block_x = pt.getblockLength_x();
+    uint block_z = pt.getblockLength_z();
+
     //uint length_x = pt.getblockLength_x() + left_border + right_border;
     //uint length_z = pt.getblockLength_z() + top_border + bottom_border;
     int min_x = pt.getindexmin_x();
     int min_z = pt.getindexmin_z();
 
+    int max_x = pt.getindexmax_x();
+    int max_z = pt.getindexmax_z();
+
+    int gap_min_x = 0, gap_min_z = 0, gap_max_x = 0, gap_max_z = 0;
+    if(min_x < 4)
+    {
+        gap_min_x = 4 - min_x;
+    }
+    if(min_z < 4)
+    {
+        gap_min_z = 4 - min_z;
+    }
+    if(max_x > totallength_x - 4)
+    {
+        gap_max_x = totallength_x - 4 - max_x;
+    }
+    if(max_z > totallength_z - 4)
+    {
+        gap_max_z = totallength_z - 4 - max_z;
+    }
+
     float dVx = 0.0f;
     float dWz = 0.0f;
 
     // 交错网格有限差分
-    for (uint iz = (h_VW.topborder > 4 - min_z + h_VW.topborder ? h_VW.topborder : 4 - min_z + h_VW.topborder); iz < totallength_z - h_VW.bottomborder - min_z; iz++)
+    for (uint iz = 0 + gap_min_z + h_VW.topborder; iz < block_z + gap_max_x; ++iz)
     {
-        for (uint ix = (h_VW.leftborder > 4 - min_x + h_VW.leftborder ? h_VW.leftborder : 4 - min_x + h_VW.leftborder); ix < totallength_x - h_VW.rightborder - min_z; ix++)
+        for (uint ix = 0 + gap_min_x + h_VW.leftborder; ix < block_x + gap_max_z; ix++)
         {
             dVx = C1_4 * (h_V[iz * h_VW.length_x + ix] - h_V[iz * h_VW.length_x + ix - 1])
                 + C2_4 * (h_V[iz * h_VW.length_x + ix + 1] - h_V[iz * h_VW.length_x + ix - 2])
@@ -853,16 +998,41 @@ void StepVW(AFDPU2D Pa,
     uint totallength_x = pt.gettotallength_x();
     uint totallength_z = pt.gettotallength_z();
 
-    uint min_x = pt.getindexmin_x();
-    uint min_z = pt.getindexmin_z();
+    uint block_x = pt.getblockLength_x();
+    uint block_z = pt.getblockLength_z();
+
+    int min_x = pt.getindexmin_x();
+    int min_z = pt.getindexmin_z();
+
+    int max_x = pt.getindexmax_x();
+    int max_z = pt.getindexmax_z();
+
+    int gap_min_x = 0, gap_min_z = 0, gap_max_x = 0, gap_max_z = 0;
+    if(min_x < 3)
+    {
+        gap_min_x = 3 - min_x;
+    }
+    if(min_z < 3)
+    {
+        gap_min_z = 3 - min_z;
+    }
+    if(max_x > totallength_x - 5)
+    {
+        gap_max_x = totallength_x - 5 - max_x;
+    }
+    if(max_z > totallength_z - 5)
+    {
+        gap_max_z = totallength_z - 5 - max_z;
+    }
+
 
     float dUx = 0.0f;
     float dUz = 0.0f;
 
     // 交错网格有限差分
-    for (uint iz = (temph_U.topborder > 4 - min_z + temph_U.topborder ? temph_U.topborder : 4 - min_z + temph_U.topborder); iz < totallength_z - temph_U.bottomborder - min_z; iz++)
+    for (uint iz = 0 + gap_min_z + temph_U.topborder; iz < block_z + gap_max_x; ++iz)
     {
-        for (uint ix = (temph_U.leftborder > 4 - min_x + temph_U.leftborder ? temph_U.leftborder : 4 - min_x + temph_U.leftborder); ix < totallength_x - temph_U.rightborder - min_z; ix++)
+        for (uint ix = 0 + gap_min_x + temph_U.leftborder; ix < block_x + gap_max_z; ix++)
         {
             dUx = C1_4 * (h_U[iz * temph_U.length_x + ix + 1] - h_U[iz * temph_U.length_x + ix])
                 + C2_4 * (h_U[iz * temph_U.length_x + ix + 2] - h_U[iz * temph_U.length_x + ix - 1])
@@ -946,12 +1116,35 @@ void StepRecordU(AFDPU2D Pa,
                 uint *h_Coord,
                 uint RecNum,
                 float *h_U,
-                float *h_RU)//zhe bu fen ye yao gai
+                float *h_RU, const Partition &pt)
 {
-    for (uint ix = 0; ix < RecNum; ix++)
+//    for (uint ix = 0; ix < RecNum; ix++)
+//    {
+//        h_RU[ix] = h_U[h_Coord[ix]];
+//    }
+
+    uint n = pt.get_h_Coord_num();
+
+    H_Coord *coord = pt.get_h_Coord();
+    int before = 0;
+    for(int i = 0; i < n; ++i)
     {
-        h_RU[ix] = h_U[h_Coord[ix]];
+//        int indexmin_x = coord[i].getindexmin_x();
+//        int indexmin_z = coord[i].getindexmin_z();
+        int length_x = coord[i].getlength_x();
+        int length_z = coord[i].getlength_z();
+
+        for (uint iz = 0; iz < length_z; iz++)
+        {
+            for (uint ix = 0; ix < length_x; ix++)
+            {
+                h_RU[before + iz * length_x + ix] = h_U[h_Coord[before + iz * length_x + ix]];
+            }
+        }
+
+        before += length_x * length_z;
     }
+//cout << pt.getrank() << endl;
 }
 
 /*------------------------------------------------------------------------
@@ -971,11 +1164,33 @@ void StepReplaceU(AFDPU2D Pa,
                 uint *h_Coord,
                 uint RecNum,
                 float *h_U,
-                float *h_RU)
+                float *h_RU, const Partition& pt)
 {
-    for (uint ix = 0; ix < RecNum; ix++)
+    uint n = pt.get_h_Coord_num();
+
+    H_Coord *coord = pt.get_h_Coord();
+    int before = 0;
+
+//    for (uint ix = 0; ix < RecNum; ix++)
+//    {
+//        h_U[h_Coord[ix]] = h_RU[ix];
+//    }
+    for(int i = 0; i < n; ++i)
     {
-        h_U[h_Coord[ix]] = h_RU[ix];
+//        int indexmin_x = coord[i].getindexmin_x();
+//        int indexmin_z = coord[i].getindexmin_z();
+        int length_x = coord[i].getlength_x();
+        int length_z = coord[i].getlength_z();
+
+        for (uint iz = 0; iz < length_z; iz++)
+        {
+            for (uint ix = 0; ix < length_x; ix++)
+            {
+                h_U[h_Coord[before + iz * length_x + ix]] = h_RU[before + iz * length_x + ix];
+            }
+        }
+
+        before += length_x * length_z;
     }
 }
 
@@ -1018,16 +1233,41 @@ void StepRtVW(AFDPU2D Pa,
     uint totallength_x = pt.gettotallength_x();
     uint totallength_z = pt.gettotallength_z();
 
-    uint min_x = pt.getindexmin_x();
-    uint min_z = pt.getindexmin_z();
+    uint block_x = pt.getblockLength_x();
+    uint block_z = pt.getblockLength_z();
+
+    int min_x = pt.getindexmin_x();
+    int min_z = pt.getindexmin_z();
+
+    int max_x = pt.getindexmax_x();
+    int max_z = pt.getindexmax_z();
+
+
+    int gap_min_x = 0, gap_min_z = 0, gap_max_x = 0, gap_max_z = 0;
+    if(min_x < 3)
+    {
+        gap_min_x = 3 - min_x;
+    }
+    if(min_z < 3)
+    {
+        gap_min_z = 3 - min_z;
+    }
+    if(max_x > totallength_x - 5)
+    {
+        gap_max_x = totallength_x - 5 - max_x;
+    }
+    if(max_z > totallength_z - 5)
+    {
+        gap_max_z = totallength_z - 5 - max_z;
+    }
 
     float dUx = 0.0f;
     float dUz = 0.0f;
 
     // 交错网格有限差分
-    for (uint iz = (temph_U.topborder > 4 - min_z + temph_U.topborder ? temph_U.topborder : 4 - min_z + temph_U.topborder); iz < totallength_z - temph_U.bottomborder - min_z; iz++)
+    for (uint iz = 0 + gap_min_z + temph_U.topborder; iz < block_z + gap_max_x; ++iz)
     {
-        for (uint ix = (temph_U.leftborder > 4 - min_x + temph_U.leftborder ? temph_U.leftborder : 4 - min_x + temph_U.leftborder); ix < totallength_x - temph_U.rightborder - min_z; ix++)
+        for (uint ix = 0 + gap_min_x + temph_U.leftborder; ix < block_x + gap_max_z; ix++)
         {
             dUx = C1_4 * (h_U[iz * temph_U.length_x + ix + 1] - h_U[iz * temph_U.length_x + ix])
                 + C2_4 * (h_U[iz * temph_U.length_x + ix + 2] - h_U[iz * temph_U.length_x + ix - 1])
@@ -1086,18 +1326,42 @@ void StepRtU(AFDPU2D Pa,
     uint totallength_x = pt.gettotallength_x();
     uint totallength_z = pt.gettotallength_z();
 
+    uint block_x = pt.getblockLength_x();
+    uint block_z = pt.getblockLength_z();
+
     //uint length_x = pt.getblockLength_x() + left_border + right_border;
     //uint length_z = pt.getblockLength_z() + top_border + bottom_border;
-    uint min_x = pt.getindexmin_x();
-    uint min_z = pt.getindexmin_z();
+    int min_x = pt.getindexmin_x();
+    int min_z = pt.getindexmin_z();
+
+    int max_x = pt.getindexmax_x();
+    int max_z = pt.getindexmax_z();
+
+    int gap_min_x = 0, gap_min_z = 0, gap_max_x = 0, gap_max_z = 0;
+    if(min_x < 4)
+    {
+        gap_min_x = 4 - min_x;
+    }
+    if(min_z < 4)
+    {
+        gap_min_z = 4 - min_z;
+    }
+    if(max_x > totallength_x - 4)
+    {
+        gap_max_x = totallength_x - 4 - max_x;
+    }
+    if(max_z > totallength_z - 4)
+    {
+        gap_max_z = totallength_z - 4 - max_z;
+    }
 
     float dVx = 0.0f;
     float dWz = 0.0f;
 
     // 交错网格有限差分
-    for (uint iz = (h_VW.topborder > 4 - min_z + h_VW.topborder ? h_VW.topborder : 4 - min_z + h_VW.topborder); iz < totallength_z - h_VW.bottomborder - min_z; iz++)
+    for (uint iz = 0 + gap_min_z + h_VW.topborder; iz < block_z + gap_max_x; ++iz)
     {
-        for (uint ix = (h_VW.leftborder > 4 - min_x + h_VW.leftborder ? h_VW.leftborder : 4 - min_x + h_VW.leftborder); ix < totallength_x - h_VW.rightborder - min_z; ix++)
+        for (uint ix = 0 + gap_min_x + h_VW.leftborder; ix < block_x + gap_max_z; ix++)
         {
             dVx = C1_4 * (h_V[iz * h_VW.length_x + ix] - h_V[iz * h_VW.length_x + ix - 1])
                 + C2_4 * (h_V[iz * h_VW.length_x + ix + 1] - h_V[iz * h_VW.length_x + ix - 2])
@@ -1455,23 +1719,20 @@ void SetCoord(AFDPU2D *Pa,
     int before = 0;
     for(int i = 0; i < n; ++i)
     {
-        int indexmin_x = coord[i].getindexmin_x();
-        int indexmin_z = coord[i].getindexmin_z();
+//        int indexmin_x = coord[i].getindexmin_x();
+//        int indexmin_z = coord[i].getindexmin_z();
         int length_x = coord[i].getlength_x();
         int length_z = coord[i].getlength_z();
 
-        if(i > 0)
-        {
-            before += coord[i-1].getlength_x() * coord[i-1].getlength_z();
-        }
         for (uint iz = 0; iz < length_z; iz++)
         {
             for (uint ix = 0; ix < length_x; ix++)
             {
 
-                h_Coord[before + iz * length_x + ix] = (indexmin_z + iz) * nnx + ix + indexmin_x;////?
+                h_Coord[before + iz * length_x + ix] = iz * length_x + ix;////?
             }
         }
+        before += length_x * length_z;
     }
 }
 
@@ -1612,6 +1873,9 @@ void CalTrueWF(AFDPU2D Pa,
 //    int top_border = pt.geth_U_topborder();
 //    length_x = block_x + left_border + pt.geth_U_rightborder();
 //    length_z = block_z + top_border + pt.geth_U_bottomborder();
+    uint RL_num = pt.getRL_num();
+
+
     for (uint is = 0; is < ip->ShotN; is++)// 反演中的炮数
     {
         memset((void *)plan->h_PHIx_U_x,	0,	sizeof(float) * block_z * block_x);
@@ -1623,16 +1887,20 @@ void CalTrueWF(AFDPU2D Pa,
         memset((void *)plan->h_U_next,		0,	sizeof(float) * block_z * block_x);
         memset((void *)plan->h_V,			0,	sizeof(float) * block_z * h_VW.length_x);
         memset((void *)plan->h_W,			0,	sizeof(float) * h_VW.length_z * block_x);
-        //memset((void *)plan->h_re,			0,	sizeof(RL) * ip->St[0].rn);
-        memset((void *)plan->h_TrueWF,		0,	sizeof(float) * ip->St[0].rn * Pa.Nt);
-
-        // 给检波器的位置信息赋值
-        //memcpy(plan->h_re,	ip->St[is].re, ip->St[is].rn * sizeof(RL));// 检波器位置数组
-
-
+        //
+        if(RL_num)
+        {
+            //memset((void *)plan->h_re,			0,	sizeof(RL) * RL_num);
+            memset((void *)plan->h_TrueWF,		0,	sizeof(float) * RL_num * Pa.Nt);
+            // 给检波器的位置信息赋值
+            //memcpy(plan->h_re,	ip->St[is].re, RL_num * sizeof(RL));// 检波器位置数组
+        }
 
         MPI_Request request_send_U, request_send_V, request_send_W, request_recv_U, request_recv_V, request_recv_W;
         MPI_Status status_send, status_recv;
+//cout << Pa.Nt << "  " << pt.getrank() << endl;
+
+
 
         // 对时间进行循环
         for (uint it = 0; it < Pa.Nt; it++)// Pa.Nt正演的时间步数
@@ -1644,30 +1912,45 @@ void CalTrueWF(AFDPU2D Pa,
                 memcpy(plan->h_U_now + temph_U.leftborder + i * temph_Vp.length_x, plan->h_U_next + i * block_x, block_x * sizeof(float));
             }
 
+
+
+//cout << pt.getrank() << endl;
             dataTransport(plan->h_U_now, pt, STEP_U, &request_send_U);//send data
-            dataGather(plan->h_U_now, pt, STEP_U, &request_recv_U);//recv data
+            //cout << pt.getrank() << endl;
 
-            // 一步记录炮集
-            StepShotGather(Pa, plan->h_U_now, plan->h_TrueWF, it, pt);//h_TrueWF
+            dataGather(plan->h_U_now, pt, STEP_U);//recv data
+            //cout << "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW" << pt.getrank() << endl;
 
-            MPI_Wait(&request_recv_U, &status_recv);
+
+            if(RL_num)
+            {
+                // 一步记录炮集
+                StepShotGather(Pa, plan->h_U_now, plan->h_TrueWF, it, pt);//h_TrueWF
+            }
+
+
+
+            //MPI_Wait(&request_recv_U, &status_recv);
+
+            //cout << "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW" << endl;
 
             // 一步更新波场U的卷积项
             StepPHIU(Pa, plan->h_U_now, plan->h_PHIx_U_x,
                 plan->h_PHIz_U_z, plan->h_Bx, plan->h_Bz, pt);//h_PHIx_U_x   h_PHIz_U_z ... h_U_now
+
 
             // 一步更新波场V和W
             StepVW(Pa, plan->h_U_now, plan->h_V, plan->h_W,
                 plan->h_PHIx_U_x, plan->h_PHIz_U_z, plan->h_Bx, plan->h_Bz, pt);//h_V  h_W ... h_U   h_PHIx_U_x   h_PHIz_U_z
 
 
-            dataTransport(plan->h_V, pt, STEP_VW, &request_send_V);//send data
-            dataTransport(plan->h_W, pt, STEP_VW, &request_send_W);//send data
-            dataGather(plan->h_V, pt, STEP_VW, &request_recv_V);//recv_v data
-            dataGather(plan->h_W, pt, STEP_VW, &request_recv_W);//recv_w data
+            dataTransport(plan->h_V, pt, STEP_V, &request_send_V);//send data
+            dataTransport(plan->h_W, pt, STEP_W, &request_send_W);//send data
+            dataGather(plan->h_V, pt, STEP_V);//recv_v data
+            dataGather(plan->h_W, pt, STEP_W);//recv_w data
 
-            MPI_Wait(&request_recv_V, &status_recv);
-            MPI_Wait(&request_recv_W, &status_recv);
+//            MPI_Wait(&request_recv_V, &status_recv);
+//            MPI_Wait(&request_recv_W, &status_recv);
 
             // 一步更新V和W的卷积项
             StepPHIVW(Pa, plan->h_V, plan->h_W, plan->h_PHIx_V_x,
@@ -1685,14 +1968,23 @@ void CalTrueWF(AFDPU2D Pa,
             if(pt.getShot_num())
             {
                 AddSource(Pa, plan->h_U_next, Wavelet, plan->h_Vp, pt);//h_U_next
+                //cout << pt.getrank() << endl;
             }
         }
 
-        // 输出炮集
-        memcpy(sgs_t + is * (Pa.Nt * ip->St[is].rn),
-            plan->h_TrueWF,
-            Pa.Nt * ip->St[is].rn * sizeof(float));/////?/\?
+//cout << pt.getrank() << endl;
+
+        if(RL_num)
+        {
+            // 输出炮集
+            memcpy(sgs_t + is * (Pa.Nt * RL_num),
+                plan->h_TrueWF,
+                Pa.Nt * RL_num * sizeof(float));/////?/\?
+
+        }
     }
+
+
 }
 
 /*------------------------------------------------------------------------
@@ -1740,12 +2032,15 @@ void CalGrad(AFDPU2D Pa,
     uint interior_min_z = pt.getinteriormin_z();
     uint interior_min_x = pt.getinteriormin_x();
     
+    uint interiorLength_x = pt.getinteriorLength_x();
+    uint interiorLength_z = pt.getinteriorLength_z();
+
     float Wavelet = 0.0f;
     //uint RecNum = (2 * Pa.Nx + 2 * Pa.Nz) * 8;
     uint RecNum = pt.geth_Coord_length();
 
     // 梯度变量空间清零
-    memset((void *)plan->h_Grad, 0, sizeof(float) * pt.getinteriorLength_z() * pt.getinteriorLength_x());
+    memset((void *)plan->h_Grad, 0, sizeof(float) * interiorLength_z * interiorLength_x);
 
     // 给速度赋值
     memset((void *)plan->h_Vp, 0, sizeof(float) * temph_Vp.length_z * temph_Vp.length_x);
@@ -1781,7 +2076,7 @@ void CalGrad(AFDPU2D Pa,
         int RL_num = pt.getRL_num();//jian bo qi ge shu
         if(RL_num == 0)
         {
-            memset((void *)plan->h_re,			0,	sizeof(RL) * RL_num);
+            //memset((void *)plan->h_re,			0,	sizeof(RL) * RL_num);
             memset((void *)plan->h_TrueWF,		0,	sizeof(float) * RL_num * Pa.Nt);
             memset((void *)plan->h_CurrWF,		0,	sizeof(float) * RL_num * Pa.Nt);
             memset((void *)plan->h_ResWF,		0,	sizeof(float) * RL_num * Pa.Nt);
@@ -1793,11 +2088,16 @@ void CalGrad(AFDPU2D Pa,
             memset((void *)plan->h_RU,			0,	sizeof(uint) * RecNum * (Pa.Nt - 1));
         }
 
-        memset((void *)plan->h_U_Der,		0,	sizeof(float) * pt.getinteriorLength_z() * pt.getinteriorLength_x());
+
+        if(interiorLength_x || interiorLength_z)
+            memset((void *)plan->h_U_Der,		0,	sizeof(float) * interiorLength_z * interiorLength_x);
 
 
-        // 给检波器位置赋值
-        //memcpy(plan->h_re,	, ip->St[is].rn * sizeof(RL));
+//        if(RL_num)
+//        {
+//            // 给检波器位置赋值
+//            memcpy(plan->h_re,	0, RL_num * sizeof(RL));
+//        }
 
         MPI_Request request_send_U, request_send_V, request_send_W, request_recv_U, request_recv_V, request_recv_W;
         MPI_Status status_send, status_recv;
@@ -1813,19 +2113,24 @@ void CalGrad(AFDPU2D Pa,
             }
 
             dataTransport(plan->h_U_now, pt, STEP_U, &request_send_U);//send data
-            dataGather(plan->h_U_now, pt, STEP_U, &request_recv_U);//recv data
+            dataGather(plan->h_U_now, pt, STEP_U);//recv data
 
-            // 一步记录炮集
-            StepShotGather(Pa, plan->h_U_now, plan->h_CurrWF, it, pt);//plan->h_CurrWF
+            if(RL_num)
+            {
+                // 一步记录炮集
+                StepShotGather(Pa, plan->h_U_now, plan->h_CurrWF, it, pt);//plan->h_CurrWF
+            }
 
+//cout << pt.getrank() << endl;
             // 一步记录有效边界内的波场
             if (it < Pa.Nt - 1 && RecNum)
             {
                 StepRecordU(Pa, plan->h_Coord, RecNum, plan->h_U_now,
-                    &plan->h_RU[it * RecNum]);//plan->h_RU[it * RecNum]
+                    &plan->h_RU[it * RecNum], pt);//plan->h_RU[it * RecNum]////
             }
+//cout << pt.getrank() << endl;
+            //MPI_Wait(&request_recv_U, &status_recv);
 
-            MPI_Wait(&request_recv_U, &status_recv);
 
             // 一步更新波场U的卷积项
             StepPHIU(Pa, plan->h_U_now, plan->h_PHIx_U_x,
@@ -1835,14 +2140,13 @@ void CalGrad(AFDPU2D Pa,
             StepVW(Pa, plan->h_U_now, plan->h_V, plan->h_W,
                 plan->h_PHIx_U_x, plan->h_PHIz_U_z, plan->h_Bx, plan->h_Bz, pt);//plan->h_V, plan->h_W
 
+            dataTransport(plan->h_V, pt, STEP_V, &request_send_V);//send data
+            dataTransport(plan->h_W, pt, STEP_W, &request_send_W);//send data
+            dataGather(plan->h_V, pt, STEP_V);//recv_v data
+            dataGather(plan->h_W, pt, STEP_W);//recv_w data
 
-            dataTransport(plan->h_V, pt, STEP_VW, &request_send_V);//send data
-            dataTransport(plan->h_W, pt, STEP_VW, &request_send_W);//send data
-            dataGather(plan->h_V, pt, STEP_VW, &request_recv_V);//recv_v data
-            dataGather(plan->h_W, pt, STEP_VW, &request_recv_W);//recv_w data
-
-            MPI_Wait(&request_recv_V, &status_recv);
-            MPI_Wait(&request_recv_W, &status_recv);
+//            MPI_Wait(&request_recv_V, &status_recv);
+//            MPI_Wait(&request_recv_W, &status_recv);
 
             // 一步更新V和W的卷积项
             StepPHIVW(Pa, plan->h_V, plan->h_W, plan->h_PHIx_V_x,
@@ -1904,9 +2208,13 @@ void CalGrad(AFDPU2D Pa,
                     AddSource(Pa, plan->h_U_next, -1.0f * Wavelet, plan->h_Vp, pt);
                 }
 
-                // 求取波场对时间的2阶导数
-                StepCal2Der(Pa, plan->h_U_past, plan->h_U_now,
-                    plan->h_U_next, plan->h_U_Der, pt);
+                if(interiorLength_x || interiorLength_z)
+                {
+                    // 求取波场对时间的2阶导数
+                    StepCal2Der(Pa, plan->h_U_past, plan->h_U_now,
+                        plan->h_U_next, plan->h_U_Der, pt);
+
+                }
 
                 // 波场转换
                 for(int iz = 0; iz < block_z; ++iz)
@@ -1914,33 +2222,43 @@ void CalGrad(AFDPU2D Pa,
                     memcpy(plan->h_U_next + iz * block_x, plan->h_U_now + (iz + temph_U.topborder) * temph_U.length_x + temph_U.leftborder, block_x * sizeof(float));
                     memcpy(plan->h_U_now + (iz + temph_U.topborder) * temph_U.length_x + temph_U.leftborder, plan->h_U_past + iz * block_x, block_x * sizeof(float));
                 }
+
             }
             else
             {
                 // 消除震源
                 Wavelet = Ricker(Pa.f0, it * Pa.dt);
-                AddSource(Pa, plan->h_U_next, -1.0f * Wavelet, plan->h_Vp, pt);
+                if(pt.getShot_num())
+                {
+                    AddSource(Pa, plan->h_U_next, -1.0f * Wavelet, plan->h_Vp, pt);
+                }
 
-                // 替换有效边界内的波场
-                StepReplaceU(Pa, plan->h_Coord, RecNum, plan->h_U_now,
-                    &plan->h_RU[it * RecNum]);
+                if(RecNum)
+                {
+                    // 替换有效边界内的波场
+                    StepReplaceU(Pa, plan->h_Coord, RecNum, plan->h_U_now,
+                        &plan->h_RU[it * RecNum], pt);
+
+                }
 
                 dataTransport(plan->h_U_now, pt, STEP_U, &request_send_U);//send data
-                dataGather(plan->h_U_now, pt, STEP_U, &request_recv_U);//recv data
-                MPI_Wait(&request_recv_U, &status_recv);
+                dataGather(plan->h_U_now, pt, STEP_U);//recv data
+                //MPI_Wait(&request_recv_U, &status_recv);
 
                 // 逆时间更新V和W
                 StepRtVW(Pa, plan->h_U_now, plan->h_V, plan->h_W,
                     plan->h_PHIx_U_x, plan->h_PHIz_U_z, pt);
 
 
-                dataTransport(plan->h_V, pt, STEP_VW, &request_send_V);//send data
-                dataTransport(plan->h_W, pt, STEP_VW, &request_send_W);//send data
-                dataGather(plan->h_V, pt, STEP_VW, &request_recv_V);//recv_v data
-                dataGather(plan->h_W, pt, STEP_VW, &request_recv_W);//recv_w data
+                dataTransport(plan->h_V, pt, STEP_V, &request_send_V);//send data
+                MPI_Wait(&request_send_V, &status_send);
+                dataTransport(plan->h_W, pt, STEP_W, &request_send_W);//send data
+                MPI_Wait(&request_send_W, &status_send);
+                dataGather(plan->h_W, pt, STEP_W);//recv_w data
+                dataGather(plan->h_V, pt, STEP_V);//recv_v data
 
-                MPI_Wait(&request_recv_V, &status_recv);
-                MPI_Wait(&request_recv_W, &status_recv);
+//                MPI_Wait(&request_recv_V, &status_recv);
+//                MPI_Wait(&request_recv_W, &status_recv);
 
 
                 // 逆时间更新U
@@ -1948,9 +2266,13 @@ void CalGrad(AFDPU2D Pa,
                     plan->h_V, plan->h_W,plan->h_PHIx_V_x, plan->h_PHIz_W_z,
                     plan->h_Vp, pt);
 
-                // 求取波场对时间的2阶导数
-                StepCal2Der(Pa, plan->h_U_past, plan->h_U_now,
-                    plan->h_U_next, plan->h_U_Der, pt);
+                if(interiorLength_x || interiorLength_z)
+                {
+                    // 求取波场对时间的2阶导数
+                    StepCal2Der(Pa, plan->h_U_past, plan->h_U_now,
+                        plan->h_U_next, plan->h_U_Der, pt);
+                }
+
 
                 // 波场转换
                 for(int iz = 0; iz < block_z; ++iz)
@@ -1969,12 +2291,16 @@ void CalGrad(AFDPU2D Pa,
             }
 
             dataTransport(plan->h_U_now, pt, STEP_U, &request_send_U);//send data
-            dataGather(plan->h_U_now, pt, STEP_U, &request_recv_U);//recv data
+            dataGather(plan->h_U_now, pt, STEP_U);//recv data
 
-            // 一步求取梯度
-            StepCalGrad(Pa, plan->h_Grad, plan->h_U_Der, plan->h_U_now_r, pt);//plan->h_Grad
+            if(interiorLength_x || interiorLength_z)
+            {
+                // 一步求取梯度
+                StepCalGrad(Pa, plan->h_Grad, plan->h_U_Der, plan->h_U_now_r, pt);//plan->h_Grad
 
-            MPI_Wait(&request_recv_U, &status_recv);
+            }
+
+            //MPI_Wait(&request_recv_U, &status_recv);
 
             // 一步更新波场U的卷积项
             StepPHIU(Pa, plan->h_U_now_r, plan->h_PHIx_U_x_r,
@@ -1985,13 +2311,13 @@ void CalGrad(AFDPU2D Pa,
                 plan->h_PHIx_U_x_r, plan->h_PHIz_U_z_r, plan->h_Bx, plan->h_Bz, pt);
 
 
-            dataTransport(plan->h_V, pt, STEP_VW, &request_send_V);//send data
-            dataTransport(plan->h_W, pt, STEP_VW, &request_send_W);//send data
-            dataGather(plan->h_V, pt, STEP_VW, &request_recv_V);//recv_v data
-            dataGather(plan->h_W, pt, STEP_VW, &request_recv_W);//recv_w data
+            dataTransport(plan->h_V, pt, STEP_V, &request_send_V);//send data
+            dataTransport(plan->h_W, pt, STEP_W, &request_send_W);//send data
+            dataGather(plan->h_V, pt, STEP_V);//recv_v data
+            dataGather(plan->h_W, pt, STEP_W);//recv_w data
 
-            MPI_Wait(&request_recv_V, &status_recv);
-            MPI_Wait(&request_recv_W, &status_recv);
+//            MPI_Wait(&request_recv_V, &status_recv);
+//            MPI_Wait(&request_recv_W, &status_recv);
 
             // 一步更新V和W的卷积项
             StepPHIVW(Pa, plan->h_V_r, plan->h_W_r, plan->h_PHIx_V_x_r,
@@ -2011,15 +2337,13 @@ void CalGrad(AFDPU2D Pa,
 
         // 求取目标函数
         if(RL_num)
-            for (uint m = 0; m < ip->St[is].rn * Pa.Nt; m++)
+            for (uint m = 0; m < RL_num * Pa.Nt; m++)
             {
-                ip->ObjIter[It] += 0.5f * powf(plan->h_ResWF[m], 2.0f);//ci shi It = 0
+                ip->ObjIter[It] += 0.5f * powf(plan->h_ResWF[m], 2.0f);//ci shi It = 0// zhe li suan de zhi shi jubu de han shu
             }
     }
     // 输出梯度
-    uint interiorLength_x = pt.getinteriorLength_x();
-    uint interiorLength_z = pt.getinteriorLength_z();
-    for(uint i = 0; i < pt.getinteriorLength_z(); ++i)
+    for(uint i = 0; i < interiorLength_z; ++i)
     {
         memcpy(ip->GradVp + (i + interior_min_z - Pa.PMLz) * Pa.Nx + interior_min_x, plan->h_Grad + i * interiorLength_x, pt.getinteriorLength_z() * pt.getinteriorLength_x() * sizeof(float));
     }
@@ -2073,8 +2397,11 @@ void CalStepLength(AFDPU2D Pa,
 //    int h_U_length_z = block_z + pt.geth_U_topborder() + pt.geth_U_bottomborder();
 
     uint RL_num = pt.getRL_num();
-    memset((void *)plan->h_SumResTrial,	0,	sizeof(float) * RL_num * Pa.Nt);
-    memset((void *)plan->h_SumResCurr,	0,	sizeof(float) * RL_num * Pa.Nt);
+    if(RL_num)
+    {
+        memset((void *)plan->h_SumResTrial,	0,	sizeof(float) * RL_num * Pa.Nt);
+        memset((void *)plan->h_SumResCurr,	0,	sizeof(float) * RL_num * Pa.Nt);
+    }
 
     float Wavelet = 0.0f;
     float fenmu = 0.0f, fenzi = 0.0f;
@@ -2142,12 +2469,12 @@ void CalStepLength(AFDPU2D Pa,
             }
 
             dataTransport(plan->h_U_now, pt, STEP_U, &request_send_U);//send data
-            dataGather(plan->h_U_now, pt, STEP_U, &request_recv_U);//recv data
+            dataGather(plan->h_U_now, pt, STEP_U);//recv data
 
             // 一步记录炮集
             StepShotGather(Pa, plan->h_U_now, plan->h_TrailWF, it, pt);
 
-            MPI_Wait(&request_recv_U, &status_recv);
+//            MPI_Wait(&request_recv_U, &status_recv);
 
             // 一步更新波场U的卷积项
             StepPHIU(Pa, plan->h_U_now, plan->h_PHIx_U_x,
@@ -2157,13 +2484,13 @@ void CalStepLength(AFDPU2D Pa,
             StepVW(Pa, plan->h_U_now, plan->h_V, plan->h_W,
                 plan->h_PHIx_U_x, plan->h_PHIz_U_z, plan->h_Bx, plan->h_Bz, pt);
 
-            dataTransport(plan->h_V, pt, STEP_VW, &request_send_V);//send data
-            dataTransport(plan->h_W, pt, STEP_VW, &request_send_W);//send data
-            dataGather(plan->h_V, pt, STEP_VW, &request_recv_V);//recv_v data
-            dataGather(plan->h_W, pt, STEP_VW, &request_recv_W);//recv_w data
+            dataTransport(plan->h_V, pt, STEP_V, &request_send_V);//send data
+            dataTransport(plan->h_W, pt, STEP_W, &request_send_W);//send data
+            dataGather(plan->h_V, pt, STEP_V);//recv_v data
+            dataGather(plan->h_W, pt, STEP_W);//recv_w data
 
-            MPI_Wait(&request_recv_V, &status_recv);
-            MPI_Wait(&request_recv_W, &status_recv);
+//            MPI_Wait(&request_recv_V, &status_recv);
+//            MPI_Wait(&request_recv_W, &status_recv);
 
 
             // 一步更新V和W的卷积项
@@ -2215,7 +2542,8 @@ void CalStepLength(AFDPU2D Pa,
         fenmu += plan->h_SumResTrial[m] * plan->h_SumResTrial[m];
     }
 
-    ip->Alpha = (fenzi / fenmu) * e;
+    if(RL_num)
+        ip->Alpha = (fenzi / fenmu) * e;
 }
 
 
@@ -2243,6 +2571,9 @@ void PreProcess(AFDPU2D Pa,
 
     int interiorLength_x = pt.getinteriorLength_x();
     int interiorLength_z = pt.getinteriorLength_z();
+
+    if(interiorLength_x == 0 || interiorLength_z == 0)
+        return;
 
     int interior_min_x = pt.getinteriormin_x();
     int interior_min_z = pt.getinteriormin_z();
@@ -2288,23 +2619,23 @@ void PreProcess(AFDPU2D Pa,
 
     if(temph_Vp.topborder)
     {
-        dataGather(plan->h_Vp, pt, TOP_TO_BOTTOM, &request_recv);
-        MPI_Wait(&request_recv, &status);
+        dataGather(plan->h_Vp, pt, TOP_TO_BOTTOM);
+//        MPI_Wait(&request_recv, &status);
     }
     if(temph_Vp.leftborder)
     {
-        dataGather(plan->h_Vp, pt, RIGHT_TO_LEFT, &request_recv);
-        MPI_Wait(&request_recv, &status);
+        dataGather(plan->h_Vp, pt, RIGHT_TO_LEFT);
+//        MPI_Wait(&request_recv, &status);
     }
     if(temph_Vp.bottomborder)
     {
-        dataGather(plan->h_Vp, pt, BOTTOM_TO_TOP, &request_recv);
-        MPI_Wait(&request_recv, &status);
+        dataGather(plan->h_Vp, pt, BOTTOM_TO_TOP);
+//        MPI_Wait(&request_recv, &status);
     }
     if(temph_Vp.rightborder)
     {
-        dataGather(plan->h_Vp, pt, LEFT_TO_RIGHT, &request_recv);
-        MPI_Wait(&request_recv, &status);
+        dataGather(plan->h_Vp, pt, LEFT_TO_RIGHT);
+//        MPI_Wait(&request_recv, &status);
     }
 
     UpdateVpPML(Pa, plan->h_Vp, plan->h_Grad, ip->Alpha, pt);

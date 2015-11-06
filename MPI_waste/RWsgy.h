@@ -18,6 +18,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
+#include <mpi.h>
 #include "Partition.h"
 
 #define     ROOT_ID     0
@@ -469,8 +470,8 @@ bool ReadSgyData(char FileName[], Trace *trace, REEL reel,
                  bool *BReel, bool *BIBM, const Partition &pt);
 
 /* 将数据写到Sgy文件中:写成微机格式，IEEE的浮点类型 */
-bool WriteSgy(char FileName[], unsigned char *f3200, Trace *trace, unsigned short TraceNum, unsigned short SampleNum,
-              unsigned short SampleInt, const Partition &pt, const AFDPU2D &Pa, usht tag);
+bool WriteSgy(const char * const FileName, unsigned char *f3200, Trace *trace, unsigned short TraceNum, unsigned short SampleNum,
+              unsigned short SampleInt, const Partition &pt, const AFDPU2D &Pa, MPI_Offset filesize, usht tag);
 
 
 #endif //__RWSGY_H__
