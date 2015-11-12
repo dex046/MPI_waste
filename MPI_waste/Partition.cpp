@@ -1,6 +1,6 @@
 /******************************************
  * author:dwx
- * 2015.10.15
+ * 2015.11.7
  ******************************************/
 #include "Partition.h"
 #include <iostream>
@@ -45,7 +45,6 @@ Partition::Partition(const AFDPU2D *Pa, const IP *ip, uint totallength_x, uint t
         if(temp_x >= indexmin_x && temp_x <= indexmax_x && temp_z >= indexmin_z && temp_z <= indexmax_z)
         {
             this->shot.push_back({temp_x - indexmin_x, temp_z - indexmin_z});
-            //cout << rank << endl;
         }
     }
 
@@ -64,12 +63,6 @@ Partition::Partition(const AFDPU2D *Pa, const IP *ip, uint totallength_x, uint t
     setInside(*Pa);
     set_h_Coord(*Pa);
     setRL(ip, Pa);
-//cout << rank << " : " << this->h_Coord_num << endl;
-//    this->insideLength_x = insidemax_x - insidemin_x;
-//    this->insideLength_z = insidemax_z - insidemin_z;
-
-    
-//    this->thisBlocklength_x = islastblock_x() ? 
 }
 Partition::~Partition()
 {
@@ -93,14 +86,6 @@ uint Partition::getblockPosition_z() const
 {
     return this->blockPosition_z;
 }
-//int Partition::getborderlength_x() const
-//{
-//    return this->borderLength_x;
-//}
-//int Partition::getborderlength_z() const
-//{
-//    return this->borderLength_z;
-//}
 uint Partition::getblockLength_x() const
 {
     return this->blockLength_x;
@@ -235,10 +220,8 @@ vector<pair<uint, uint>> Partition::getShot() const
 }
 void Partition::setRL(const IP *ip, const AFDPU2D *Pa)
 {
-    //ip->St[is].rn = 510;
     this->RL_beginnum = INT_MAX;
     this->RL_endnum = INT_MIN;
-//cout << ip->St[0].rn << endl;
     for(uint is = 0; is < ip->ShotN; ++is)
     {
         for (uint m = 0; m < ip->St[is].rn; m++)
@@ -734,10 +717,6 @@ void Partition::setInside(AFDPU2D Pa)
         {
             this->inside_num = 0;
         }
-//        this->insidemin_x = (indexmin_x > Pa.PMLx) ? indexmin_x : Pa.PMLx;
-//        this->insidemin_z = (indexmin_z > Pa.PMLz) ? indexmin_z : Pa.PMLz;
-//        this->insidemax_x = (indexmax_x < Pa.Nx + Pa.PMLx) ? indexmax_x : Pa.Nx + Pa.PMLx;
-//        this->insidemax_z = (indexmax_z < Pa.Nz + Pa.PMLz) ? indexmax_z : Pa.Nz + Pa.PMLz;
     }
 
     this->inside_length = 0;
@@ -775,7 +754,7 @@ void Partition::set_h_Coord(AFDPU2D Pa)
         if(this->indexmax_x < Pa.PMLx + Pa.Nx)
         {
             if(this->indexmax_z < Pa.PMLz)
-            {//cout << rank << endl;
+            {
                 this->h_Coord_num = 1;
                 H_Coord *coord = new H_Coord[this->h_Coord_num];
                 coord[0].indexmin_x = Pa.PMLx;
@@ -888,7 +867,7 @@ void Partition::set_h_Coord(AFDPU2D Pa)
             }
             else
             {
-//cout << rank << endl;
+
             }
         }
         else if(this->indexmax_x >= Pa.PMLx + Pa.Nx)

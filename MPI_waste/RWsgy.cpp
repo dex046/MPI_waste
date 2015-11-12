@@ -1,6 +1,6 @@
 /******************************************
  * author:dwx
- * 2015.10.15
+ * 2015.11.7
  ******************************************/
 #include "RWsgy.h"
 #include "Partition.h"
@@ -231,79 +231,97 @@ bool ReadSgyData(char FileName[], Trace *trace, REEL reel,
     int length_x = pt.getblockLength_x();
     int length_z = pt.getblockLength_z();
 
+    uint totallength_x = pt.gettotallength_x();
+    uint totallength_z = pt.gettotallength_z();
+
     // 根据文件中数据的存储形式来开辟空间
     if (*DFormat == 1 || *DFormat == 5)
     {
-        TempData1 = new float[length_z];
+        TempData1 = new float[length_x];
         memset((void *)TempData1, 0, sizeof(float) * length_z);//zhe li yong sizeof houmian que xie si le
     }
     else if (*DFormat == 2)
     {
-        TempData2 = new int[length_z];
+        TempData2 = new int[length_x];
         memset((void *)TempData2, 0, sizeof(int) * length_z);
     }
     else if (*DFormat == 3)
     {
-        TempData3 = new short[length_z];
+        TempData3 = new short[length_x];
         memset((void *)TempData3, 0, sizeof(short) * length_z);
     }
     else if (*DFormat == 4)
     {
-        TempData4 = new double[length_z];
+        TempData4 = new double[length_x];
         memset((void *)TempData4, 0, sizeof(double) * length_z);
     }
 
-    FILE *fdata;
-    fdata = fopen(FileName, "rb");
-    fseek(fdata, 0, 0);
+    MPI_File fdata;
+    MPI_File_open(MPI_COMM_WORLD, FileName, MPI_MODE_RDONLY, MPI_INFO_NULL, &fdata);
+
+    MPI_Offset offset = 0, filesize = 0;
+    MPI_Status status;
 
     // 如果有卷头
     if (*BReel)
-    {
+    {//cout << 111;
         // 读前面3200字节
-        fread(f3200, 3200, 1, fdata);
+        MPI_File_read_at(fdata, offset, f3200, 3200, MPI_BYTE, &status);
         // 开始读卷头400字节
-        fread(&(reel).reelstruct, 400, 1, fdata);
+        MPI_File_read_at(fdata, offset + 3200, &(reel).reelstruct, 400, MPI_BYTE, &status);
+        offset += 3600;
     }
 
     int indexmin_x = pt.getindexmin_x();
     int indexmin_z = pt.getindexmin_z();
+
+    offset += indexmin_x * (totallength_z * sizeof(float) + 240) + indexmin_z * sizeof(float);
+
     for (int i = 0; i < length_x; i++)
     {
-        // 读道头
-        fread(&trace[i].head.h2, 2, 120, fdata);//h2 h4 headstruct
-        // 如果是IBM的float
-        if (*BIBM)
+        if(pt.isfirstblock_z())
         {
-            for (int j = 0; j < 120; j++)//120??
+            // 读道头
+            ///fread(&trace[i].head.h2, 2, 120, fdata);//h2 h4 headstruct
+            MPI_File_read_at(fdata, offset, &trace[i].head.h2, 240, MPI_BYTE, &status);
+
+            // 如果是IBM的float
+            if (*BIBM)
             {
-                if (j / 2 == 7 || j / 2 == 8 || j / 2 == 17 || (j >= 44 && j < 91))
+                for (int j = 0; j < 120; j++)//120??
                 {
-                    swap((short *)&trace[i + indexmin_z].head.h2[j]);
+                    if (j / 2 == 7 || j / 2 == 8 || j / 2 == 17 || (j >= 44 && j < 91))
+                    {
+                        swap((short *)&trace[i].head.h2[j]);
+                    }
+                }
+                for (int j = 0; j < 60; j++)
+                {
+                    if (j == 7 || j == 8 || j == 17 || (j >= 22 && j < 46));
+                    else
+                    {
+                        swap(&trace[i].head.h4[j]);
+                    }
                 }
             }
-            for (int j = 0; j < 60; j++)
+
+            trace[i].head.h2[114] = 0;// ?114
+            if (trace[i].head.h2[57] != *SampleNum)///
             {
-                if (j == 7 || j == 8 || j == 17 || (j >= 22 && j < 46));
-                else
-                {
-                    swap(&trace[i + indexmin_z].head.h4[j]);
-                }
+                return false;
             }
         }
 
-        trace[i + indexmin_z].head.h2[114] = 0;// ?114
-        if (trace[i].head.h2[57] != *SampleNum)///
-        {
-            return false;
-        }
+        offset += 240;
 
         // IBM float
         if (*DFormat == 1)
         {
-            fseek(fdata, indexmin_x * 4, i * length_x);
-            fread(TempData1, 4, length_x, fdata);
-            for (int ii = 0; ii < length_x; ii++)
+
+//            fseek(fdata, 0, 0);
+//            fseek(fdata, i * (totallength_z * 4 + 240) + 240, 3600 + indexmin_x * (totallength_z * 4 + 240) + indexmin_z * 4);
+//            fread(TempData1, 4, length_z, fdata);
+            for (int ii = 0; ii < length_z; ii++)
             {
                 if (*BIBM)
                 {
@@ -319,8 +337,10 @@ bool ReadSgyData(char FileName[], Trace *trace, REEL reel,
         // 4字节，两互补整数
         else if (*DFormat == 2)
         {
-            fread(TempData2, 4, length_x, fdata);
-            for (int ii = 0; ii < length_x; ii++)
+//            fseek(fdata, 0, 0);
+//            fseek(fdata, i * (totallength_z * 4 + 240) + 240, 3600 + indexmin_x * (totallength_z * 4 + 240) + indexmin_z * 4);
+//            fread(TempData2, 4, length_z, fdata);
+            for (int ii = 0; ii < length_z; ii++)
             {
                 if (*BIBM)
                 {
@@ -333,8 +353,10 @@ bool ReadSgyData(char FileName[], Trace *trace, REEL reel,
         // 两字节，两互补整数
         else if (*DFormat == 3)
         {
-            fread(TempData3, 2, length_x, fdata);
-            for (int ii = 0; ii < length_x; ii++)
+//            fseek(fdata, 0, 0);
+//            fseek(fdata, i * (totallength_z * 2 + 240) + 240, 3600 + indexmin_x * (totallength_z * 2 + 240) + indexmin_z * 2);
+//            fread(TempData3, 2, length_z, fdata);
+            for (int ii = 0; ii < length_z; ii++)
             {
                 if (*BIBM)
                 {
@@ -347,8 +369,11 @@ bool ReadSgyData(char FileName[], Trace *trace, REEL reel,
         // IEEE浮点
         else if (*DFormat == 5)///?? 5 ??
         {
-            fread(TempData1, 4, length_x, fdata);
-            for (int ii = 0; ii < length_x; ii++)
+            MPI_File_read_at(fdata, offset, TempData1, length_z, MPI_FLOAT, &status);
+            offset += totallength_z * sizeof(float);
+//            fseek(fdata, i * (totallength_z * 4 + 240) + 240, 3600 + indexmin_x * (totallength_z * 4 + 240) + indexmin_z * 4);
+//            fread(TempData1, 4, length_z, fdata);
+            for (int ii = 0; ii < length_z; ii++)
             {
                 if (*BIBM)
                 {
@@ -361,11 +386,13 @@ bool ReadSgyData(char FileName[], Trace *trace, REEL reel,
         // 无卷头
         else
         {
-            fread(trace[i].data, 4, length_x, fdata);
+//            fseek(fdata, 0, 0);
+//            fseek(fdata, i * (totallength_z * 4 + 240) + 240, 3600 + indexmin_x * (totallength_z * 4 + 240) + indexmin_z * 4);
+//            fread(trace[i].data, 4, length_z, fdata);
         }
     }
 
-    fclose(fdata);
+    MPI_File_close(&fdata);
 
     if (*DFormat == 1 || *DFormat == 5)
     {
@@ -387,73 +414,59 @@ bool ReadSgyData(char FileName[], Trace *trace, REEL reel,
     return true;
 }
 
-/* 将数据写到Sgy文件中:写成微机格式，IEEE的浮点类型 */
+/* 将数据写到Sgy文件中:写成微机格式，IEEE的浮点类型 *///TraceNum nnx SampleNum nnz
 bool WriteSgy(const char * const FileName, unsigned char *f3200, Trace *trace, unsigned short TraceNum, unsigned short SampleNum,
               unsigned short SampleInt, const Partition &pt, const AFDPU2D &Pa, MPI_Offset filesize, usht tag)
 {
-//    FILE *fp;
-//    fp = fopen(FileName, "wb");
     MPI_File fh;
     MPI_File_open(MPI_COMM_WORLD, FileName, MPI_MODE_WRONLY, MPI_INFO_NULL, &fh);
-
-
 
     MPI_Offset offset = 0;
     MPI_Status status;
 
     int rank = pt.getrank();
-    //MPI_Offset filesize;
-
-    if(rank == ROOT_ID)
-    {
-
-        MPI_File_set_size(fh, filesize);
-        MPI_File_get_size(fh, &filesize);
-        MPI_Barrier(MPI_COMM_WORLD);
-        cout << "filesize = " << filesize << endl;
-        MPI_Barrier(MPI_COMM_WORLD);
-    }
-    MPI_Barrier(MPI_COMM_WORLD);
 
     int indexmin_x = 0;
     int indexmin_z = 0;
 
-    int nnz = pt.gettotallength_z();
+    int nnz = 0;
+    int nnx = 0;
+
+    int block_x = 0;
+    int block_z = 0;
+
+    MPI_File_set_size(fh, filesize);
 
     if(tag == WRITE_INTER)
     {
         indexmin_x = pt.getinteriormin_x();
         indexmin_z = pt.getinteriormin_z();
+
+        nnz = Pa.Nz;
+        nnx = Pa.Nx;
+
+        block_x = pt.getinteriorLength_x();
+        block_z = pt.getinteriorLength_z();
     }
     else if(tag == WRITE_ALL)
     {
         indexmin_x = pt.getindexmin_x();
         indexmin_z = pt.getindexmin_z();
+
+        nnz = pt.gettotallength_z();
+        nnx = pt.gettotallength_x();
+
+        block_x = pt.getblockLength_x();
+        block_z = pt.getblockLength_z();
     }
     else
     {
 
     }
 
-
-
-    int block_x = pt.getblockLength_x();
-    int block_z = pt.getblockLength_z();
-
-
-
-
-
     // 写卷头前3200个字节
     if(rank == ROOT_ID)
     {
-//        MPI_Barrier(MPI_COMM_WORLD);
-//        cout << "rank = " << pt.getrank() << endl;
-//        MPI_Barrier(MPI_COMM_WORLD);
-        //fwrite(&f3200[0], 3200, 1, fp);
-        MPI_Barrier(MPI_COMM_WORLD);
-        cout << "rank = " << pt.getrank() << endl;
-        MPI_Barrier(MPI_COMM_WORLD);
         MPI_File_write_at(fh, offset, &f3200[0], 3200, MPI_BYTE, &status);
 
         // 写卷头中400个字节
@@ -462,64 +475,45 @@ bool WriteSgy(const char * const FileName, unsigned char *f3200, Trace *trace, u
         reel.reelstruct.hdt = SampleInt;
         reel.reelstruct.format = 5; // IEEE float
         reel.reelstruct.mfeet = 1;
-        //fwrite(&reel.reelstruct, 400, 1, fp);
-//        MPI_Barrier(MPI_COMM_WORLD);
-//        cout << "rank = " << pt.getrank() << endl;
-//        MPI_Barrier(MPI_COMM_WORLD);
+
         MPI_File_write_at(fh, offset + 3200, &reel, 400, MPI_BYTE, &status);
     }
 
     if(tag == WRITE_INTER)
     {
-        offset = (3600 + ((indexmin_x - Pa.PMLx) * Pa.Nz + indexmin_z - Pa.PMLz)) * sizeof(float);
+        offset = (3600 + ((indexmin_x - Pa.PMLx) * nnz + indexmin_z - Pa.PMLz) * sizeof(float) + (indexmin_x - Pa.PMLx) * 240);
     }
     else if(tag == WRITE_ALL)
     {
-        offset = (3600 + (indexmin_x * nnz + indexmin_z)) * sizeof(float);
+        offset = (3600 + (indexmin_x * nnz + indexmin_z) * sizeof(float) + (indexmin_x) * 240);
     }
     else
     {
 
     }
 
-//    MPI_Barrier(MPI_COMM_WORLD);
-//    cout << "rank = " << pt.getrank() << endl;
-//    MPI_Barrier(MPI_COMM_WORLD);
-
     // 写每一道数据
-    for (int i = 0; i < block_x; i++)
+    int i = 0;
+    for (i = 0; i < block_x; i++)
     {
         // 写道头
         if(pt.isfirstblock_z())
         {
-            trace[i].head.headstruct.cdp = i;
+            trace[i].head.headstruct.cdp = indexmin_x + i;
             trace[i].head.headstruct.ns = SampleNum;
             trace[i].head.headstruct.dt = SampleInt;
             trace[i].head.headstruct.sx = 100000;
-            trace[i].head.headstruct.sy = 1000000 + i * 4;
+            trace[i].head.headstruct.sy = 1000000 + (indexmin_x + i) * 4;
 
-            MPI_File_write_at(fh, offset, &trace[i].head.headstruct, 240, MPI_INT, &status);
+            MPI_File_write_at(fh, offset, &trace[i].head.headstruct, 240, MPI_BYTE, &status);
         }
+
         offset += 240;
         MPI_File_write_at(fh, offset, &trace[i].data[0], block_z, MPI_FLOAT, &status);
-//        fwrite(&trace[i].head.headstruct, 240, 1, fp);
-//        fwrite(&trace[i].data[0], 4, SampleNum, fp);
 
-        //
-        if(tag == WRITE_INTER)
-        {
-            offset += Pa.Nz * sizeof(float);
-        }
-        else if(tag == WRITE_ALL)
-        {
-            offset += nnz * sizeof(float);
-        }
-        else
-        {
-
-        }
+        offset += (nnz * sizeof(float));
     }
+    MPI_Barrier(MPI_COMM_WORLD);
     MPI_File_close(&fh);
-    //fclose(fp);
     return true;
 }

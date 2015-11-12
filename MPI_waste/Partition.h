@@ -1,6 +1,6 @@
 /******************************************
  * author:dwx
- * 2015.10.15
+ * 2015.11.7
  ******************************************/
 #ifndef PARTITION_H
 #define PARTITION_H
@@ -96,74 +96,6 @@ public:
     H_Border(uint length_x, uint legnth_z, uint topborder, uint leftborder, uint bottomborder, uint rightborder);
 };
 
-//class H_U
-//{
-//public:
-//    uint h_U_length_x;
-//    uint h_U_length_z;
-
-//    uint topborder;
-//    uint leftborder;
-//    uint bottomborder;
-//    uint rightborder;
-
-//    H_U();
-//    H_U(uint topborder, uint leftborder, uint bottomborder, uint rightborder);
-//    H_U(uint length_x, uint legnth_z, uint topborder, uint leftborder, uint bottomborder, uint rightborder);
-////public:
-////    uint geth_U_length_x() const;
-////    uint geth_U_length_z() const;
-
-////    uint geth_U_topborder() const;
-////    uint geth_U_leftborder() const;
-////    uint geth_U_bottomborder() const;
-////    uint geth_U_rightborder() const;
-//};
-
-//class H_VW
-//{
-//public:
-//    uint h_VW_length_x;
-//    uint h_VW_length_z;
-
-//    uint h_V_leftborder;
-//    uint h_V_rightborder;
-//    uint h_W_topborder;
-//    uint h_W_bottomborder;
-
-//    H_VW();
-//    H_VW(uint topborder, uint leftborder, uint bottomborder, uint rightborder);
-//    H_VW(uint length_x, uint legnth_z, uint topborder, uint leftborder, uint bottomborder, uint rightborder);
-////public:
-////    uint geth_V_length_x() const;
-////    uint geth_V_length_z() const;
-
-////    uint geth_V_leftborder() const;
-////    uint geth_V_rightborder() const;
-////    uint geth_W_topborder() const;
-////    uint geth_W_bottomborder() const;
-//};
-
-//class H_Vp
-//{
-//public:
-//    uint h_Vp_length_x;
-//    uint h_Vp_length_z;
-
-//    uint h_Vp_leftborder;
-//    uint h_Vp_rightborder;
-//    uint h_Vp_topborder;
-//    uint h_Vp_bottomborder;
-
-//    H_Vp();
-//    H_Vp(uint, uint, uint, uint);
-//    H_Vp(uint, uint, uint, uint, uint, uint);
-////public:
-////    uint geth_Vp_leftborder() const;
-////    uint geth_Vp_rightborder() const;
-////    uint geth_Vp_topborder() const;
-////    uint geth_Vp_bottomborder() const;
-//};
 
 class Partition{
 private:
@@ -214,32 +146,6 @@ private:
     uint RL_endnum;
 
     vector<uint> trans_h_Vp;//top left bottom right
-//    bool trans_h_Vp_toleft;
-//    bool trans_h_Vp_toright;
-//    bool trans_h_Vp_tobottom;
-//    bool trans_h_Vp_totop;
-
-//    int h_V_leftborder;
-//    int h_V_rightborder;
-
-//    int h_W_topborder;
-//    int h_W_bottomborder;
-
-    //int h_VW_border[4];//h_W_topborder 0,  h_V_leftborder 1, h_W_bottomborder 2, h_V_rightborder 3
-
-//    int h_U_leftborder;
-//    int h_U_rightborder;
-//    int h_U_topborder;
-//    int h_U_bottomborder;
-
-    //int h_U_border[4];
-
-//    int h_Vp_topborder;
-//    int h_Vp_leftborder;
-//    int h_Vp_bottomborder;
-//    int h_Vp_rightborder;
-
-    //int h_Vp_border[4];//top left bottom right
 
 public:
     Partition();
@@ -253,8 +159,6 @@ public:
     uint getblockPosition_x() const;
     uint getblockPosition_z() const;
 
-//    int getborderlength_x() const;
-//    int getborderlength_z() const;
     uint gettotallength_x() const;
     uint gettotallength_z() const;
     uint getsumBlock_x() const;
@@ -293,19 +197,7 @@ public:
     H_Border geth_VW() const;
     H_Border geth_Vp() const;
 
-//    int geth_U_leftborder() const;
-//    int geth_U_rightborder() const;
-//    int geth_U_topborder() const;
-//    int geth_U_bottomborder() const;
-
-//    int geth_V_leftborder() const;
-//    int geth_V_rightborder() const;
-
-//    int geth_W_topborder() const;
-//    int geth_W_bottomborder() const;
-
     void seth_Vp_border(AFDPU2D Pa);
-    //int *geth_Vp_border() const;
 
     uint getShot_num() const;
     vector<pair<uint, uint>> getShot() const;

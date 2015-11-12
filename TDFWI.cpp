@@ -85,6 +85,13 @@ void ReadData(char FileName[],
 		SampleNum, SampleInt, DFormat,
 		&BReel, &BIBM);
 
+//    cout << BReel << endl;
+//    cout << *TraceNum << endl;
+//    cout << *SampleNum << endl;
+//    cout << *SampleInt << endl;
+//    cout << *DFormat << endl;
+//    cout << BIBM << endl;
+
     cout << "TraceNum:  " << dec << *TraceNum << endl;
     cout << "SampleNum:  " << dec << *SampleNum << endl;
 
@@ -110,6 +117,7 @@ void ReadData(char FileName[],
 			if (flag == 0)
 			{
 				Data[m * *TraceNum + n] = trace[n].data[m];
+                //cout << trace[n].data[m];
 			}
 			else
 			{
@@ -416,6 +424,7 @@ void AddSource(AFDPU2D Pa,
 
 	h_U[s.Sz * nnx + s.Sx] += 
 		Wave * (Pa.dt * Pa.dt * h_Vp[s.Sz * nnx + s.Sx]);
+    //cout << h_Vp[s.Sz * nnx + s.Sx]<<endl;
 }
 
 /*------------------------------------------------------------------------
@@ -652,6 +661,7 @@ void StepShotGather(AFDPU2D Pa,
 	{
 		id = h_re[ir].Rz * nnx + h_re[ir].Rx;
 		h_SG[ir * Pa.Nt + nstep] = h_U[id];
+        //cout << h_U[id];
 	}
 }
 
@@ -1219,10 +1229,12 @@ void CalTrueWF(AFDPU2D Pa,
 
 	float Wavelet = 0.0f;
 	
+    ofstream fout("abc.txt");
 	// 给速度赋值
     memset((void *)plan->h_Vp,			0,	sizeof(float) * nnz * nnx);// h_Vp 正演中使用的速度
-	memcpy(plan->h_Vp,	ip->TrueVp,	 nnz * nnx * sizeof(float));
-
+    memcpy(plan->h_Vp,	ip->TrueVp,	 nnz * nnx * sizeof(float));
+//        for(int i = 0; i < nnz * nnx; ++i)
+//            cout << *(ip->TrueVp + i);
     for (uint is = 0; is < ip->ShotN; is++)// 反演中的炮数
 	{
 		memset((void *)plan->h_PHIx_U_x,	0,	sizeof(float) * nnz * nnx);
@@ -1246,6 +1258,17 @@ void CalTrueWF(AFDPU2D Pa,
 			// 波场时刻转换
 			memcpy(plan->h_U_past, plan->h_U_now, nnz * nnx * sizeof(float));
 			memcpy(plan->h_U_now, plan->h_U_next, nnz * nnx * sizeof(float));
+
+
+            if(it == Pa.Nt - 1)
+            {
+                for(int i = 0; i < 116; ++i)
+                {
+                    for(int j = 0; j < 304; ++j)
+                        //if(*(plan->h_U_now + i * nnx + j) != 0)
+                        cout << *(plan->h_U_now + i * nnx + j) << " ";
+                }
+            }
 
 			// 一步记录炮集
 			StepShotGather(Pa, plan->h_U_now, plan->h_TrueWF,
@@ -1273,12 +1296,22 @@ void CalTrueWF(AFDPU2D Pa,
 
 			AddSource(Pa, plan->h_U_next, ip->St[is].s,
 				Wavelet, plan->h_Vp);
+            if(it == 0)
+            {
+                //cout << Wavelet << endl;
+//                for(int i = 0; i < nnx * nnz; ++i)
+//                    cout << *(plan->h_U_next + i);
+            }
 		}
 
 		// 输出炮集
 		memcpy(sgs_t + is * (Pa.Nt * ip->St[is].rn),
 			plan->h_TrueWF,
 			Pa.Nt * ip->St[is].rn * sizeof(float));
+//                for(int i = 0; i < Pa.Nt * ip->St[is].rn; ++i)
+//                {
+//                    cout << *(sgs_t + i);
+//                }
 	}
 }
 

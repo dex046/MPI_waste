@@ -24,3 +24,7 @@ testTDFWI.o: testTDFWI.cpp testTDFWI.h Partition.h
 
 testmain.o: testmain.cpp 
 	mpicxx -c -std=c++11 testmain.cpp
+
+clean:
+	rm -rf *.o
+	rm -rf MPI_waste

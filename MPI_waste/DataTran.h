@@ -1,28 +1,12 @@
+/******************************************
+ * author:dwx
+ * 2015.11.7
+ ******************************************/
 #ifndef DATATRAN_H
 #define DATATRAN_H
 #include "Partition.h"
 #include <mpi.h>
 #include "RWsgy.h"
-
-//#define U_TOP_TO_BOTTOM 0
-//#define U_LEFT_TO_RIGHT 1
-//#define U_BOTTOM_TO_TOP 2
-//#define U_RIGHT_TO_LEFT 3
-
-//#define V_TOP_TO_BOTTOM 4
-//#define V_LEFT_TO_RIGHT 5
-//#define V_BOTTOM_TO_TOP 6
-//#define V_RIGHT_TO_LEFT 7
-
-//#define W_TOP_TO_BOTTOM 8
-//#define W_LEFT_TO_RIGHT 9
-//#define W_BOTTOM_TO_TOP 10
-//#define W_RIGHT_TO_LEFT 11
-
-//#define VP_TOP_TO_BOTTOM 12
-//#define VP_LEFT_TO_RIGHT 13
-//#define VP_BOTTOM_TO_TOP 14
-//#define VP_RIGHT_TO_LEFT 15
 
 #define TOP_TO_BOTTOM 0
 #define LEFT_TO_RIGHT 1
@@ -34,9 +18,13 @@
 #define STEP_W 8
 #define STEP_VP 12
 
+#define STEP_FEN 16
+#define STEP_MAX 17
+#define STEP_OBJ 18
+
 //#define UpdateVpPML 3
-void dataTransport(float *data, const Partition& pt, int tag, MPI_Request *request);
-void dataTransport_Vp(float *data, const Partition& pt, int tag, const AFDPU2D &Pa, MPI_Request *request);
+void dataTransport(float *data, const Partition& pt, int tag);
+void dataTransport_Vp(float *data, const Partition& pt, int tag, const AFDPU2D &Pa);
 
 void dataGather(float *data, const Partition& pt, int tag);
 

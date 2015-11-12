@@ -76,7 +76,8 @@ int main()
 
 	ReadData(TrueVp, ip->TrueVp, 0);
 	ReadData(InitVp, ip->CurrVp, 0);
-
+//    for(int i = 0; i < nnx * nnz; ++i)
+//        cout << ip->TrueVp[i];
     // 反演中使用到的全局变量
 	CPUVs *plan;
 	plan = new CPUVs[1];

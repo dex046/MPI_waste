@@ -267,10 +267,10 @@ bool ReadSgyData(char FileName[], Trace *trace, REEL reel, unsigned short *Trace
 		// 读前面3200字节
 		fread(f3200, 3200, 1, fdata); 
 		// 开始读卷头400字节
-		fread(&(reel).reelstruct, 400, 1, fdata);
+        fread(&(reel).reelstruct, 400, 1, fdata);//cout << 111 << endl;
 	}
 
-	for (int i = 0; i < *TraceNum; i++)
+    for (int i = 0; i < *TraceNum; i++)//nnx
 	{
 		// 读道头
         fread(&trace[i].head.h2, 2, 120, fdata);//h2 h4 headstruct
@@ -407,7 +407,7 @@ bool WriteSgy(char FileName[], unsigned char *f3200, Trace *trace, unsigned shor
 	fwrite(&reel.reelstruct, 400, 1, fp);
 
 	// 写每一道数据
-	for (int i = 0; i < TraceNum; i++)
+    for (int i = 0; i < TraceNum; i++)//
 	{
 		trace[i].head.headstruct.cdp = i;
 		trace[i].head.headstruct.ns = SampleNum;
