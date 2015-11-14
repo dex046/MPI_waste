@@ -72,7 +72,7 @@ void copydatatobuf(float *data, float *buf, const Partition& pt, uint transportl
     {
         for(uint i = 0; i < block_z; ++i)
         {
-            memcpy(buf + i * transportlen_side, data + (i + 1 + topborder) * length_x - rightborder - transportlen_side, sizeof(float) * transportlen_side);
+            memcpy(buf + i * transportlen_side, data + (i + topborder) * length_x + leftborder + block_x - transportlen_side, sizeof(float) * transportlen_side);
         }
     }
     if(flag == TOP_TO_BOTTOM)
@@ -80,7 +80,7 @@ void copydatatobuf(float *data, float *buf, const Partition& pt, uint transportl
         for(uint i = 0; i < transportlen_side; ++i)
         {
             memcpy(buf + i * block_x, data + (block_z + topborder + i - transportlen_side) * length_x + leftborder, sizeof(float) * block_x);
-        }
+        }//cout << 1324 <<endl;
     }
     if(flag == BOTTOM_TO_TOP)
     {
@@ -121,7 +121,7 @@ void copydatatobuf_Vp(float *data, float *buf, const Partition& pt, uint transpo
         gap_x = Pa.PMLx + Pa.Nx - 1 - indexmin_x;
         for(int i = 0; i < block_z; ++i)
         {
-            memcpy(buf + i * transportlen_side, data + (i + 1 + topborder) * temph_Vp.length_x - rightborder - transportlen_side + gap_x, sizeof(float) * transportlen_side);
+            memcpy(buf + i * transportlen_side, data + (i + topborder) * temph_Vp.length_x + leftborder + gap_x, sizeof(float) * transportlen_side);
         }
     }
     if(flag == TOP_TO_BOTTOM)
@@ -129,7 +129,7 @@ void copydatatobuf_Vp(float *data, float *buf, const Partition& pt, uint transpo
         gap_z = Pa.PMLz + Pa.Nz - 1 - indexmin_z;
         for(int i = 0; i < transportlen_side; ++i)
         {
-            memcpy(buf + i * block_x, data + (topborder + i - transportlen_side + 1 + gap_z) * temph_Vp.length_x + leftborder, sizeof(float) * block_x);
+            memcpy(buf + i * block_x, data + (topborder + i + gap_z) * temph_Vp.length_x + leftborder, sizeof(float) * block_x);
         }
     }
     if(flag == BOTTOM_TO_TOP)
@@ -159,7 +159,7 @@ void copybuftodata(float *buf, float *data, const Partition& pt, uint transportl
     uint rightborder = 0;
     uint length_x = block_x;
     uint length_z = block_z;
-    transportlen_side = 0;
+    //transportlen_side = 0;
 
     if(tag == STEP_U)
     {
@@ -204,17 +204,20 @@ void copybuftodata(float *buf, float *data, const Partition& pt, uint transportl
         }
     }
     if(flag == LEFT_TO_RIGHT)
-    {
+    {/*cout << block_z * transportlen_side << endl;
+        for(int i = 0; i < block_z * transportlen_side; ++i)
+            cout << *(buf + i);*/
         for(uint i = 0; i < block_z; ++i)
         {
             memcpy(data + (i + topborder) * length_x, buf + i * transportlen_side, sizeof(float) * transportlen_side);
         }
+
     }
     if(flag == BOTTOM_TO_TOP)
     {
         for(uint i = 0; i < transportlen_side; ++i)
         {
-            memcpy(data + (i + topborder + block_z) * length_x, buf + i * block_x, sizeof(float) * block_x);
+            memcpy(data + (i + topborder + block_z) * length_x + leftborder, buf + i * block_x, sizeof(float) * block_x);
         }
     }
     if(flag == RIGHT_TO_LEFT)
@@ -316,7 +319,7 @@ void dataGather(float *data, const Partition& pt, int tag)
 }
 
 
-void dataTransport(float *data, const Partition& pt, int tag)
+void dataTransport(float *data, const Partition& pt, int tag, int it)
 {
 
     H_Border temph_U = pt.geth_U();
@@ -327,7 +330,43 @@ void dataTransport(float *data, const Partition& pt, int tag)
     uint pos_x = pt.getblockPosition_x();
     uint pos_z = pt.getblockPosition_z();
 
+    uint block_x = pt.getblockLength_x();
+    uint block_z = pt.getblockLength_z();
+
+    uint topborder = 0;
+    uint leftborder = 0;
+    uint bottomborder = 0;
+    uint rightborder = 0;
+
+    uint transportlen_side = 0;
     uint length = 0;
+
+    if(tag == STEP_U)
+    {
+        topborder = temph_U.topborder;
+        leftborder = temph_U.leftborder;
+        bottomborder = temph_U.bottomborder;
+        rightborder = temph_U.rightborder;
+    }
+    else if(tag == STEP_V || tag == STEP_W)
+    {
+        topborder = temph_VW.topborder;
+        leftborder = temph_VW.leftborder;
+        bottomborder = temph_VW.bottomborder;
+        rightborder = temph_VW.rightborder;
+    }
+    else if(tag == STEP_VP)
+    {
+        topborder = temph_Vp.topborder;
+        leftborder = temph_Vp.leftborder;
+        bottomborder = temph_Vp.bottomborder;
+        rightborder = temph_Vp.rightborder;
+    }
+    else
+    {
+
+    }
+
 
 
     if(pos_z % 2)
@@ -335,18 +374,46 @@ void dataTransport(float *data, const Partition& pt, int tag)
         if(!pt.islastblock_z())
         {
             //cout << pt.getrank() + pt.getsumBlock_x() << "www" << pt.getrank() << endl;
-            uint transportlength_z = 0;
-            switch(tag)
-            {
-            case STEP_U: transportlength_z = temph_U.topborder;break;
-            case STEP_V: transportlength_z = temph_VW.topborder;break;
-            case STEP_W: transportlength_z = temph_VW.topborder;break;
-            };
-
-            length = transportlength_z * pt.getblockLength_x();
+            uint transportlength_z = topborder;
+            length = transportlength_z * block_x;
             float *buf = new float[length];
             copydatatobuf(data, buf, pt, transportlength_z, tag, TOP_TO_BOTTOM);
             MPI_Send(buf, length, MPI_FLOAT, pt.getrank() + pt.getsumBlock_x(), tag + TOP_TO_BOTTOM, MPI_COMM_WORLD);
+        }
+        if(!pt.isfirstblock_z())
+        {
+            uint transportlength_z = bottomborder;
+            length = transportlength_z * block_x;
+            float *buf = new float[length];
+            copydatatobuf(data, buf, pt, transportlength_z, tag, BOTTOM_TO_TOP);
+
+//            if(it == 50 && pt.getrank() == 2 && tag == STEP_U)
+//                //cout << tag << endl;
+//            for(int i = 0; i < length; ++i)
+//                cout << *(buf + i) << " ";
+            MPI_Send(buf, length, MPI_FLOAT, pt.getrank() - pt.getsumBlock_x(), tag + BOTTOM_TO_TOP, MPI_COMM_WORLD);
+        }
+        ///////////////////
+        if(!pt.isfirstblock_z())
+        {
+            length = topborder * block_x;
+            float *buf = new float[length];
+            MPI_Recv(buf, length, MPI_FLOAT, MPI_ANY_SOURCE, tag + TOP_TO_BOTTOM, MPI_COMM_WORLD, &status);
+
+    //        for(int i = 0; i < length; ++i)
+    //            cout << *(buf + i);
+
+            transportlen_side = topborder;
+            copybuftodata(buf, data, pt, transportlen_side, tag, TOP_TO_BOTTOM);
+        }
+        if(!pt.islastblock_z())
+        {
+            length = bottomborder * block_x;
+            float *buf = new float[length];
+            MPI_Recv(buf, length, MPI_FLOAT, MPI_ANY_SOURCE, tag + BOTTOM_TO_TOP, MPI_COMM_WORLD, &status);
+            transportlen_side = bottomborder;
+            copybuftodata(buf, data, pt, transportlen_side, tag, BOTTOM_TO_TOP);
+
         }
     }
     else
@@ -363,62 +430,174 @@ void dataTransport(float *data, const Partition& pt, int tag)
             transportlen_side = topborder;
             copybuftodata(buf, data, pt, transportlen_side, tag, TOP_TO_BOTTOM);
         }
-    }
-
-
-    if(!pt.islastblock_z())
-    {
-
-
-    }
-    if(!pt.islastblock_x())
-    {
-        //cout << "toright" << pt.getrank() << endl;
-        uint transportlength_x = 0;
-        switch(tag)
+        if(!pt.islastblock_z())
         {
-        case STEP_U: transportlength_x = temph_U.leftborder;break;
-        case STEP_V: transportlength_x = temph_VW.leftborder;break;
-        case STEP_W: transportlength_x = temph_VW.leftborder;break;
-        };
 
-        uint length = transportlength_x * pt.getblockLength_z();
-        float *buf = new float[length];
-        copydatatobuf(data, buf, pt, transportlength_x, tag, LEFT_TO_RIGHT);
-        MPI_Send(buf, length, MPI_FLOAT, pt.getrank() + 1, tag + LEFT_TO_RIGHT, MPI_COMM_WORLD);
-    }
-    if(!pt.isfirstblock_z())
-    {
-        //cout << "totop" << pt.getrank() << endl;
-        uint transportlength_z = 0;
-        switch(tag)
+
+            length = bottomborder * block_x;
+            float *buf = new float[length];
+            MPI_Recv(buf, length, MPI_FLOAT, MPI_ANY_SOURCE, tag + BOTTOM_TO_TOP, MPI_COMM_WORLD, &status);
+            transportlen_side = bottomborder;
+            copybuftodata(buf, data, pt, transportlen_side, tag, BOTTOM_TO_TOP);
+
+//            if(it == 50 && pt.getrank() == 0 && tag == STEP_U)
+//                //cout << tag << endl;
+//            for(int i = 0; i < length; ++i)
+//                if(*(buf + i))
+//                cout << i % block_x << " ";
+
+        }
+        //////////////////
+        if(!pt.islastblock_z())
         {
-        case STEP_U: transportlength_z = temph_U.bottomborder;break;
-        case STEP_V: transportlength_z = temph_VW.bottomborder;break;
-        case STEP_W: transportlength_z = temph_VW.bottomborder;break;
-        };
-
-        uint length = transportlength_z * pt.getblockLength_x();
-        float *buf = new float[length];
-        copydatatobuf(data, buf, pt, transportlength_z, tag, BOTTOM_TO_TOP);
-        MPI_Send(buf, length, MPI_FLOAT, pt.getrank() - pt.getsumBlock_x(), tag + BOTTOM_TO_TOP, MPI_COMM_WORLD);
-    }
-    if(!pt.isfirstblock_x())
-    {
-        //cout << "toleft" << pt.getrank() << endl;
-        uint transportlength_x = 0;
-        switch(tag)
+            //cout << pt.getrank() + pt.getsumBlock_x() << "www" << pt.getrank() << endl;
+            uint transportlength_z = topborder;
+            length = transportlength_z * pt.getblockLength_x();
+            float *buf = new float[length];
+            copydatatobuf(data, buf, pt, transportlength_z, tag, TOP_TO_BOTTOM);
+            MPI_Send(buf, length, MPI_FLOAT, pt.getrank() + pt.getsumBlock_x(), tag + TOP_TO_BOTTOM, MPI_COMM_WORLD);
+        }
+        if(!pt.isfirstblock_z())
         {
-        case STEP_U: transportlength_x = temph_U.rightborder;break;
-        case STEP_V: transportlength_x = temph_VW.rightborder;break;
-        case STEP_W: transportlength_x = temph_VW.rightborder;break;
-        };
-
-        uint length = transportlength_x * pt.getblockLength_z();
-        float *buf = new float[length];
-        copydatatobuf(data, buf, pt, transportlength_x, tag, RIGHT_TO_LEFT);
-        MPI_Send(buf, length, MPI_FLOAT, pt.getrank() - 1, tag + RIGHT_TO_LEFT, MPI_COMM_WORLD);
+            uint transportlength_z = bottomborder;
+            length = transportlength_z * pt.getblockLength_x();
+            float *buf = new float[length];
+            copydatatobuf(data, buf, pt, transportlength_z, tag, BOTTOM_TO_TOP);
+            MPI_Send(buf, length, MPI_FLOAT, pt.getrank() - pt.getsumBlock_x(), tag + BOTTOM_TO_TOP, MPI_COMM_WORLD);
+        }
     }
+
+    if(pos_x % 2)
+    {
+        if(!pt.islastblock_x())
+        {
+            //cout << "toright" << pt.getrank() << endl;
+            uint transportlength_x = leftborder;
+            length = transportlength_x * pt.getblockLength_z();
+            float *buf = new float[length];
+            copydatatobuf(data, buf, pt, transportlength_x, tag, LEFT_TO_RIGHT);
+            MPI_Send(buf, length, MPI_FLOAT, pt.getrank() + 1, tag + LEFT_TO_RIGHT, MPI_COMM_WORLD);
+        }
+        if(!pt.isfirstblock_x())
+        {
+
+            uint transportlength_x = rightborder;
+            length = transportlength_x * pt.getblockLength_z();
+            float *buf = new float[length];
+            copydatatobuf(data, buf, pt, transportlength_x, tag, RIGHT_TO_LEFT);
+            MPI_Send(buf, length, MPI_FLOAT, pt.getrank() - 1, tag + RIGHT_TO_LEFT, MPI_COMM_WORLD);
+        }
+
+
+        if(!pt.islastblock_x())
+        {
+            length = rightborder * block_z;
+            float *buf = new float[length];
+            MPI_Recv(buf, length, MPI_FLOAT, MPI_ANY_SOURCE, tag + RIGHT_TO_LEFT, MPI_COMM_WORLD, &status);
+            transportlen_side = rightborder;
+            copybuftodata(buf, data, pt, transportlen_side, tag, RIGHT_TO_LEFT);
+        }
+        if(!pt.isfirstblock_x())
+        {//cout << pt.getrank() << endl;
+            length = leftborder * block_z;
+            float *buf = new float[length];
+            MPI_Recv(buf, length, MPI_FLOAT, MPI_ANY_SOURCE, tag + LEFT_TO_RIGHT, MPI_COMM_WORLD, &status);
+
+//            if(pt.getrank() == 1)
+//                for(int i = 0; i < length; ++i)
+//                    cout << *(buf + i);
+
+            transportlen_side = leftborder;
+            //cout << transportlen_side << endl;
+            copybuftodata(buf, data, pt, transportlen_side, tag, LEFT_TO_RIGHT);
+//            for(int i = 0; i < length; ++i)
+//                cout << *(data + i) << " ";
+        }
+    }
+    else
+    {
+        if(!pt.islastblock_x())
+        {
+            length = rightborder * block_z;
+            float *buf = new float[length];
+            MPI_Recv(buf, length, MPI_FLOAT, MPI_ANY_SOURCE, tag + RIGHT_TO_LEFT, MPI_COMM_WORLD, &status);
+            transportlen_side = rightborder;
+            copybuftodata(buf, data, pt, transportlen_side, tag, RIGHT_TO_LEFT);
+        }
+        if(!pt.isfirstblock_x())
+        {
+            length = leftborder * block_z;
+            float *buf = new float[length];
+            MPI_Recv(buf, length, MPI_FLOAT, MPI_ANY_SOURCE, tag + LEFT_TO_RIGHT, MPI_COMM_WORLD, &status);
+
+            transportlen_side = leftborder;
+            copybuftodata(buf, data, pt, transportlen_side, tag, LEFT_TO_RIGHT);
+        }
+
+
+        if(!pt.islastblock_x())
+        {
+
+            uint transportlength_x = leftborder;
+            length = transportlength_x * pt.getblockLength_z();
+            float *buf = new float[length];
+            copydatatobuf(data, buf, pt, transportlength_x, tag, LEFT_TO_RIGHT);
+            MPI_Send(buf, length, MPI_FLOAT, pt.getrank() + 1, tag + LEFT_TO_RIGHT, MPI_COMM_WORLD);
+        }
+        if(!pt.isfirstblock_x())
+        {
+
+            uint transportlength_x = rightborder;
+            length = transportlength_x * pt.getblockLength_z();
+            float *buf = new float[length];
+            copydatatobuf(data, buf, pt, transportlength_x, tag, RIGHT_TO_LEFT);
+            MPI_Send(buf, length, MPI_FLOAT, pt.getrank() - 1, tag + RIGHT_TO_LEFT, MPI_COMM_WORLD);
+        }
+    }
+
+
+//    if(!pt.islastblock_z())
+//    {
+
+
+//    }
+//    if(!pt.islastblock_x())
+//    {
+//        //cout << "toright" << pt.getrank() << endl;
+//        uint transportlength_x = 0;
+//        switch(tag)
+//        {
+//        case STEP_U: transportlength_x = temph_U.leftborder;break;
+//        case STEP_V: transportlength_x = temph_VW.leftborder;break;
+//        case STEP_W: transportlength_x = temph_VW.leftborder;break;
+//        };
+
+//        uint length = transportlength_x * pt.getblockLength_z();
+//        float *buf = new float[length];
+//        copydatatobuf(data, buf, pt, transportlength_x, tag, LEFT_TO_RIGHT);
+//        MPI_Send(buf, length, MPI_FLOAT, pt.getrank() + 1, tag + LEFT_TO_RIGHT, MPI_COMM_WORLD);
+//    }
+//    if(!pt.isfirstblock_z())
+//    {
+//        //cout << "totop" << pt.getrank() << endl;
+
+//    }
+//    if(!pt.isfirstblock_x())
+//    {
+//        //cout << "toleft" << pt.getrank() << endl;
+//        uint transportlength_x = 0;
+//        switch(tag)
+//        {
+//        case STEP_U: transportlength_x = temph_U.rightborder;break;
+//        case STEP_V: transportlength_x = temph_VW.rightborder;break;
+//        case STEP_W: transportlength_x = temph_VW.rightborder;break;
+//        };
+
+//        uint length = transportlength_x * pt.getblockLength_z();
+//        float *buf = new float[length];
+//        copydatatobuf(data, buf, pt, transportlength_x, tag, RIGHT_TO_LEFT);
+//        MPI_Send(buf, length, MPI_FLOAT, pt.getrank() - 1, tag + RIGHT_TO_LEFT, MPI_COMM_WORLD);
+//    }
 }
 
 
@@ -433,6 +612,7 @@ void dataTransport_Vp(float *data, const Partition& pt, int tag, const AFDPU2D &
     uint block_z = pt.getblockLength_z();
 
     int transportlength_z = 1;
+
     if(tag == RIGHT_TO_LEFT && !pt.isfirstblock_x())
     {
         for(uint i = 1; i < blockPosition_x; ++i)

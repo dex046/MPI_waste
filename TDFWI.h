@@ -170,11 +170,11 @@ void AddSource(AFDPU2D Pa,
 
 // 一步更新波场U的卷积项
 void StepPHIU(AFDPU2D Pa,
-			float *h_U,
-			float *h_PHIx_U_x,
-			float *h_PHIz_U_z,
-			float *h_Bx,
-			float *h_Bz);
+            float *h_U,
+            float *h_PHIx_U_x,
+            float *h_PHIz_U_z,
+            float *h_Bx,
+            float *h_Bz, int it);
 
 // 一步更新波场V和W的卷积项
 void StepPHIVW(AFDPU2D Pa,
@@ -187,26 +187,26 @@ void StepPHIVW(AFDPU2D Pa,
 
 // 一步更新波场U
 void StepU(AFDPU2D Pa,
-			float *h_U_next,
-			float *h_U_now,
-			float *h_U_past,
-			float *h_V,
-			float *h_W,
-			float *h_PHIx_V_x,
-			float *h_PHIz_W_z,
-			float *h_Bx,
-			float *h_Bz,
-			float *h_Vp);
+            float *h_U_next,
+            float *h_U_now,
+            float *h_U_past,
+            float *h_V,
+            float *h_W,
+            float *h_PHIx_V_x,
+            float *h_PHIz_W_z,
+            float *h_Bx,
+            float *h_Bz,
+            float *h_Vp, int it);
 
 // 一步更新波场V和W
 void StepVW(AFDPU2D Pa,
-			float *h_U,
-			float *h_V,
-			float *h_W,
-			float *h_PHIx_U_x,
-			float *h_PHIz_U_z,
-			float *h_Bx,
-			float *h_Bz);
+            float *h_U,
+            float *h_V,
+            float *h_W,
+            float *h_PHIx_U_x,
+            float *h_PHIz_U_z,
+            float *h_Bx,
+            float *h_Bz, int it);
 
 // 一步记录检波器位置的波场值 
 void StepShotGather(AFDPU2D Pa,

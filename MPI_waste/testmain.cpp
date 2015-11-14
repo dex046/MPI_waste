@@ -54,7 +54,7 @@ int main(int argc, char ** argv)
         ip->St[i].rn = 510;
     }
 
-    uint cpu_x = 2, cpu_z = 2;
+    uint cpu_x = 5, cpu_z = 4;
     Partition pt(Pa, ip, nnx, nnz, cpu_x, cpu_z, temph_U, temph_VW, 8, rank, p_size);//borderlength = 4
 
     uint length_x = pt.getblockLength_x();
@@ -63,8 +63,12 @@ int main(int argc, char ** argv)
     uint interiorlength_x = pt.getinteriorLength_x();
     uint interiorlength_z = pt.getinteriorLength_z();
 
+//    cout << interiorlength_x << endl;
+//    cout << interiorlength_z << endl;
+
     uint RL_num = pt.getRL_num();
 
+    //cout << "rank=" << rank << " " << pt.getRL_beginnum() << "wwww" << endl;
     uint indexmin_x = pt.getindexmin_x();
     uint indexmax_x = pt.getindexmax_x();
     uint indexmin_z = pt.getindexmin_z();
@@ -159,66 +163,65 @@ int main(int argc, char ** argv)
     duration = clock() - begin;
 
     MPI_Barrier(MPI_COMM_WORLD);
-//    if(rank == ROOT_ID)
-//        cout << "\tCalculating the observed data used:\t" << duration / CLOCKS_PER_SEC << "s" << endl;
+    if(rank == ROOT_ID)
+        cout << "\tCalculating the observed data used:\t" << duration / CLOCKS_PER_SEC << "s" << endl;
 
-//    // 迭代过程中为了求取步长使用的试探步长
-//    float e = 24.0f;
-
-
-//    for (uint It = 0; It < ip->IterN; It++)
-//    {
-//        // 求取梯度
-//        if(rank == ROOT_ID)
-//        {
-//            cout << "\n\tDoing the " << It << "th iteration" << endl;
-//            cout << "\tCalculating the Gradient..." << endl;
-//        }
-
-//        begin = clock();
-//        CalGrad(*Pa, ip, plan, sgs_t, sgs_c, sgs_r, It, pt);\
+    // 迭代过程中为了求取步长使用的试探步长
+    float e = 24.0f;
 
 
-//        MPI_Barrier(MPI_COMM_WORLD);
+    for (uint It = 0; It < ip->IterN; It++)
+    {
+        // 求取梯度
+        if(rank == ROOT_ID)
+        {
+            cout << "\n\tDoing the " << It << "th iteration" << endl;
+            cout << "\tCalculating the Gradient..." << endl;
+        }
 
-//        //cout << ip->ObjIter[It] << endl;
-//        // 梯度后处理
-//        PostProcessGrad(*Pa, ip->GradVp, plan->h_Vp, pt);
+        begin = clock();
+        CalGrad(*Pa, ip, plan, sgs_t, sgs_c, sgs_r, It, pt);
 
-//        // 求取步长
-//        CalStepLength(*Pa, ip, plan, sgs_t, sgs_c, e, pt);
-//        duration = clock() - begin;
+        MPI_Barrier(MPI_COMM_WORLD);
 
-//        MPI_Barrier(MPI_COMM_WORLD);
-//        if(rank == ROOT_ID)
-//        {
-//            cout << "\tObjective function value:\t" << ip->ObjIter[It] << endl;
-//            cout << "\tStep length:\t" << ip->Alpha << endl;
-//            cout << "\tThe " << It << "th iteration used " << duration / CLOCKS_PER_SEC << "s" << endl;
-//        }
+        //cout << ip->ObjIter[It] << endl;
+        // 梯度后处理
+        PostProcessGrad(*Pa, ip->GradVp, plan->h_Vp, pt);
 
-//        // 下一步迭代预处理
-//        PreProcess(*Pa, ip, plan, pt);
-//    }
+        // 求取步长
+        CalStepLength(*Pa, ip, plan, sgs_t, sgs_c, e, pt);
+        duration = clock() - begin;
 
-//    if(rank == ROOT_ID)
-//    {
-//        cout << "\tWriting data to .sgy1" << endl;
-//    }
+        MPI_Barrier(MPI_COMM_WORLD);
+        if(rank == ROOT_ID)
+        {
+            cout << "\tObjective function value:\t" << ip->ObjIter[It] << endl;
+            cout << "\tStep length:\t" << ip->Alpha << endl;
+            cout << "\tThe " << It << "th iteration used " << duration / CLOCKS_PER_SEC << "s" << endl;
+        }
 
-//    const char * const TrueSg = "TrueSG.sgy";
-//    const char * const GradVp = "GradientVp.sgy";
-//    const char * const InvertedVp = "InvertedVp.sgy";
+        // 下一步迭代预处理
+        //PreProcess(*Pa, ip, plan, pt);
+    }
 
-//    fopen(TrueSg, "wb");
-//    fopen(GradVp, "wb");
-//    fopen(InvertedVp, "wb");
+    if(rank == ROOT_ID)
+    {
+        cout << "\tWriting data to .sgy1" << endl;
+    }
 
-//    write_sgs_t_Data(TrueSg, (usht)Pa->Nt, ip->St[0].rn, (usht)(Pa->dt * 1000000), sgs_t, pt, *Pa, 1);
-//    WriteData(GradVp, Pa->Nz, Pa->Nx, Pa->dz * 1000, ip->GradVp, pt, *Pa, 0, WRITE_INTER);
-//    WriteData(InvertedVp, nnz, nnx, Pa->dz * 1000, ip->CurrVp, pt, *Pa, 0, WRITE_ALL);
-//cout << "bbbb" << rank << endl;
-//    MPI_Barrier(MPI_COMM_WORLD);
+    const char * const TrueSg = "TrueSG.sgy";
+    const char * const GradVp = "GradientVp.sgy";
+    const char * const InvertedVp = "InvertedVp.sgy";
+
+    fopen(TrueSg, "wb");
+    fopen(GradVp, "wb");
+    fopen(InvertedVp, "wb");
+
+    write_sgs_t_Data(TrueSg, (usht)Pa->Nt, ip->St[0].rn, (usht)(Pa->dt * 1000000), sgs_t, pt, *Pa, 1);
+    WriteData(GradVp, Pa->Nz, Pa->Nx, Pa->dz * 1000, ip->GradVp, pt, *Pa, 0, WRITE_INTER);
+    WriteData(InvertedVp, nnz, nnx, Pa->dz * 1000, ip->CurrVp, pt, *Pa, 0, WRITE_ALL);
+
+    MPI_Barrier(MPI_COMM_WORLD);
     MPI_Finalize();
     return 0;
 }

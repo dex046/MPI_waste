@@ -23,7 +23,7 @@
 #define STEP_OBJ 18
 
 //#define UpdateVpPML 3
-void dataTransport(float *data, const Partition& pt, int tag);
+void dataTransport(float *data, const Partition& pt, int tag, int it);
 void dataTransport_Vp(float *data, const Partition& pt, int tag, const AFDPU2D &Pa);
 
 void dataGather(float *data, const Partition& pt, int tag);

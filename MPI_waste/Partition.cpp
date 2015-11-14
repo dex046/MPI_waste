@@ -35,8 +35,8 @@ Partition::Partition(const AFDPU2D *Pa, const IP *ip, uint totallength_x, uint t
     this->interiormax_x = this->indexmax_x < Pa->PMLx + Pa->Nx - 1 ? this->indexmax_x : Pa->PMLx + Pa->Nx - 1;
     this->interiormin_z = this->indexmin_z > Pa->PMLz ? this->indexmin_z : Pa->PMLz;
     this->interiormax_z = this->indexmax_z < Pa->PMLz + Pa->Nz - 1 ? this->indexmax_z : Pa->PMLz + Pa->Nz - 1;
-    this->interiorLength_x = this->interiormax_x >= this->interiormin_x ? this->interiormax_x - this->interiormin_x : 0;
-    this->interiorLength_z = this->interiormax_z >= this->interiormin_z ? this->interiormax_z - this->interiormin_z : 0;
+    this->interiorLength_x = this->interiormax_x >= this->interiormin_x ? this->interiormax_x - this->interiormin_x + 1 : 0;
+    this->interiorLength_z = this->interiormax_z >= this->interiormin_z ? this->interiormax_z - this->interiormin_z + 1 : 0;
 
     for (uint is = 0; is < ip->ShotN; is++)
     {
@@ -220,19 +220,19 @@ vector<pair<uint, uint>> Partition::getShot() const
 }
 void Partition::setRL(const IP *ip, const AFDPU2D *Pa)
 {
-    this->RL_beginnum = INT_MAX;
-    this->RL_endnum = INT_MIN;
+    this->RL_beginnum = 0;
+    this->RL_endnum = 0;
     for(uint is = 0; is < ip->ShotN; ++is)
     {
         for (uint m = 0; m < ip->St[is].rn; m++)
         {
             int temp_x = Pa->PMLx + 1 * m;
             int temp_z = Pa->PMLz + 2;
-            if(temp_x >= indexmin_x && temp_x <= indexmax_x && temp_z >= indexmin_z && temp_z <= indexmax_z)
+            if(temp_x >= this->indexmin_x && temp_x <= this->indexmax_x && temp_z >= this->indexmin_z && temp_z <= this->indexmax_z)
             {
                 this->RL_beginnum = this->RL_beginnum < m ? this->RL_beginnum : m;
                 this->RL_endnum = this->RL_endnum > m ? this->RL_endnum : m;
-                this->rl.push_back({temp_x - indexmin_x, temp_z - indexmin_z});
+                this->rl.push_back({temp_x - this->indexmin_x, temp_z - this->indexmin_z});
             }
         }
     }

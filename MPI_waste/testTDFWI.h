@@ -5,6 +5,7 @@
 #ifndef TESTTDFWI_H
 #define TESTTDFWI_H
 
+#include <fstream>
 #include	<iostream>
 #include	<stdio.h>
 #include	<string.h>
@@ -117,7 +118,7 @@ void StepPHIU(AFDPU2D Pa,
             float *h_PHIx_U_x,
             float *h_PHIz_U_z,
             float *h_Bx,
-            float *h_Bz, const Partition &pt);
+            float *h_Bz, const Partition &pt, int it);
 
 // 一步更新波场V和W的卷积项
 void StepPHIVW(AFDPU2D Pa,
@@ -139,7 +140,7 @@ void StepU(AFDPU2D Pa,
             float *h_PHIz_W_z,
             float *h_Bx,
             float *h_Bz,
-            float *h_Vp, const Partition &pt);
+            float *h_Vp, const Partition &pt, int it);
 
 // 一步更新波场V和W
 void StepVW(AFDPU2D Pa,
@@ -149,7 +150,7 @@ void StepVW(AFDPU2D Pa,
             float *h_PHIx_U_x,
             float *h_PHIz_U_z,
             float *h_Bx,
-            float *h_Bz, const Partition &pt);
+            float *h_Bz, const Partition &pt, int it);
 
 // 一步记录检波器位置的波场值
 void StepShotGather(AFDPU2D Pa,

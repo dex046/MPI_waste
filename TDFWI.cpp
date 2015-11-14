@@ -446,7 +446,7 @@ void StepPHIU(AFDPU2D Pa,
 			float *h_PHIx_U_x,
 			float *h_PHIz_U_z,
 			float *h_Bx,
-			float *h_Bz)
+            float *h_Bz, int it)
 {
 	uint nnx = Pa.Nx + 2 * Pa.PMLx;
 	uint nnz = Pa.Nz + 2 * Pa.PMLz;
@@ -471,6 +471,22 @@ void StepPHIU(AFDPU2D Pa,
 				h_Bx[ix] * (h_PHIx_U_x[iz * nnx + ix] + dUx / Pa.dx) - dUx / Pa.dx;
 			h_PHIz_U_z[iz * nnx + ix] = 
 				h_Bz[iz] * (h_PHIz_U_z[iz * nnx + ix] + dUz / Pa.dz) - dUz / Pa.dz;
+
+            if(it == 45 && iz == 53 && ix == 306)
+            {
+                //cout << h_PHIx_U_x[iz * nnx + ix] << endl;
+                //cout << ix << " " << h_Bx[ix] << endl;
+                //cout << dUx << " " << dUz << endl;
+//                cout << h_U[iz * nnx + ix + 1]
+//                     << " " << h_U[iz * nnx + ix]
+//                     << " " << h_U[iz * nnx + ix + 2]
+//                     << " " << h_U[iz * nnx + ix - 1]
+//                     << " " << h_U[iz * nnx + ix + 3]
+//                     << " " << h_U[iz * nnx + ix - 2]
+//                     << " " << h_U[iz * nnx + ix + 4]
+//                     << " " << h_U[iz * nnx + ix - 3]
+//                     << endl;
+            }
 		}
 	}
 }
@@ -554,7 +570,7 @@ void StepU(AFDPU2D Pa,
 			float *h_PHIz_W_z,
 			float *h_Bx,
 			float *h_Bz,
-			float *h_Vp)
+            float *h_Vp,int it)
 {
 	uint nnx = Pa.Nx + 2 * Pa.PMLx;
 	uint nnz = Pa.Nz + 2 * Pa.PMLz;
@@ -576,9 +592,42 @@ void StepU(AFDPU2D Pa,
 				+ C3_4 * (h_W[(iz + 2) * nnx + ix] - h_W[(iz - 3) * nnx + ix])
 				+ C4_4 * (h_W[(iz + 3) * nnx + ix] - h_W[(iz - 4) * nnx + ix]);
 
+            if(it == 45 && iz == 53 && ix == 305)
+            {//cout << dWz<< endl;
+//                cout << h_W[iz * nnx + ix]
+//                     << " " << h_W[(iz - 1) * nnx + ix]
+//                     << " " << h_W[(iz + 1) * nnx + ix]
+//                     << " " << h_W[(iz - 2) * nnx + ix]
+//                     << " " << h_W[(iz + 2) * nnx + ix]
+//                     << " " << h_W[(iz - 3) * nnx + ix]
+//                     << " " << h_W[(iz + 3) * nnx + ix]
+//                     << " " << h_W[(iz - 4) * nnx + ix]
+//                     << " " << dWz << endl;
+
+//                cout << (Pa.dt * Pa.dt * h_Vp[iz * nnx + ix]) << " "
+//                     << (dVx / Pa.dx + h_PHIx_V_x[iz * nnx + ix] + dWz / Pa.dz + h_PHIz_W_z[iz * nnx + ix]) << " "
+//                     << h_U_past[iz * nnx + ix] << " "
+//                     << h_U_now[iz * nnx + ix] << endl;
+                //cout << dVx << " " << h_PHIx_V_x[iz * nnx + ix] << " " << dWz << " " << h_PHIz_W_z[iz * nnx + ix] << endl;
+
+//                cout << h_V[iz * nnx + ix]
+//                     << " " << h_V[iz * nnx + ix - 1]
+//                     << " " << h_V[iz * nnx + ix + 1]
+//                     << " " << h_V[iz * nnx + ix - 2]
+//                     << " " << h_V[iz * nnx + ix + 2]
+//                     << " " << h_V[iz * nnx + ix - 3]
+//                     << " " << h_V[iz * nnx + ix + 3]
+//                     << " " << h_V[iz * nnx + ix - 4] << endl << dVx << endl;
+            }
+
 			h_U_next[iz * nnx + ix] = (Pa.dt * Pa.dt * h_Vp[iz * nnx + ix])
 				* (dVx / Pa.dx + h_PHIx_V_x[iz * nnx + ix] + dWz / Pa.dz + h_PHIz_W_z[iz * nnx + ix])
 				- h_U_past[iz * nnx + ix] + 2.0f * h_U_now[iz * nnx + ix];
+
+//            if(it == 45 && iz == 53 && ix == 305)
+//            {
+//                cout << h_U_next[iz * nnx + ix] << endl;
+//            }
 		}
 	}
 }
@@ -606,7 +655,7 @@ void StepVW(AFDPU2D Pa,
 			float *h_PHIx_U_x,
 			float *h_PHIz_U_z,
 			float *h_Bx,
-			float *h_Bz)
+            float *h_Bz, int it)
 {
 	uint nnx = Pa.Nx + 2 * Pa.PMLx;
 	uint nnz = Pa.Nz + 2 * Pa.PMLz;
@@ -629,6 +678,30 @@ void StepVW(AFDPU2D Pa,
 
 			h_V[iz * nnx + ix] = dUx / Pa.dx + h_PHIx_U_x[iz * nnx + ix];
 			h_W[iz * nnx + ix] = dUz / Pa.dz + h_PHIz_U_z[iz * nnx + ix];
+            if(it == 45 && iz == 53 && ix == 305)
+            {
+//                cout << h_U[(iz + 1) * nnx + ix] << " "
+//                     << h_U[iz * nnx + ix] << " "
+//                     << h_U[(iz + 2) * nnx + ix] << " "
+//                     << h_U[(iz - 1) * nnx + ix] << " "
+//                     << h_U[(iz + 3) * nnx + ix] << " "
+//                     << h_U[(iz - 2) * nnx + ix] << " "
+//                     << h_U[(iz + 4) * nnx + ix] << " "
+//                     << h_U[(iz - 3) * nnx + ix] << " " << dUz << endl;
+            }
+
+            if(it == 45 && iz == 53 && ix == 306)
+            {
+//                cout << h_U[iz * nnx + ix + 1]
+//                     << " " << h_U[iz * nnx + ix]
+//                     << " " << h_U[iz * nnx + ix + 2]
+//                     << " " << h_U[iz * nnx + ix - 1]
+//                     << " " << h_U[iz * nnx + ix + 3]
+//                     << " " << h_U[iz * nnx + ix - 2]
+//                     << " " << h_U[iz * nnx + ix + 4]
+//                     << " " << h_U[iz * nnx + ix - 3] << endl << dUx << endl;
+//                cout << h_PHIx_U_x[iz * nnx + ix] << endl;
+            }
 		}
 	}
 }
@@ -878,6 +951,8 @@ void StepCalGrad(AFDPU2D Pa,
 	uint nnx = Pa.Nx + 2 * Pa.PMLx;
 	uint id1 = 0, id2 = 0;
 
+//    ofstream fout("h_U_Der.txt");
+//    ofstream fout1("h_U_r.txt");
 	for (uint iz = 0; iz < Pa.Nz; iz++)
 	{
 		for (uint ix = 0; ix < Pa.Nx; ix++)
@@ -885,6 +960,12 @@ void StepCalGrad(AFDPU2D Pa,
 			id1 = iz * Pa.Nx + ix;
 			id2 = (iz + Pa.PMLz) * nnx + ix + Pa.PMLx;
 			h_Grad[id1] += -1.0f * h_U_Der[id1] * h_U_r[id2];
+
+            if(iz < 67 && ix >= 255)
+            {
+                //fout << h_U_Der[id1] << " ";
+                //fout1 << h_U_r[id2] << " ";
+            }
 		}
 	}
 }
@@ -1229,7 +1310,7 @@ void CalTrueWF(AFDPU2D Pa,
 
 	float Wavelet = 0.0f;
 	
-    ofstream fout("abc.txt");
+    //ofstream fout("abc.txt");
 	// 给速度赋值
     memset((void *)plan->h_Vp,			0,	sizeof(float) * nnz * nnx);// h_Vp 正演中使用的速度
     memcpy(plan->h_Vp,	ip->TrueVp,	 nnz * nnx * sizeof(float));
@@ -1255,20 +1336,26 @@ void CalTrueWF(AFDPU2D Pa,
 		// 对时间进行循环
         for (uint it = 0; it < Pa.Nt; it++)// Pa.Nt正演的时间步数
 		{
+
+
+
 			// 波场时刻转换
 			memcpy(plan->h_U_past, plan->h_U_now, nnz * nnx * sizeof(float));
 			memcpy(plan->h_U_now, plan->h_U_next, nnz * nnx * sizeof(float));
 
 
-            if(it == Pa.Nt - 1)
-            {
-                for(int i = 0; i < 116; ++i)
-                {
-                    for(int j = 0; j < 304; ++j)
-                        //if(*(plan->h_U_now + i * nnx + j) != 0)
-                        cout << *(plan->h_U_now + i * nnx + j) << " ";
-                }
-            }
+
+//            if(it == Pa.Nt - 1)
+//            {
+//                for(int i = 0; i < 117; ++i)
+//                {
+//                    for(int j = 305; j < 610; ++j)
+//                        if(*(plan->h_U_now + i * nnx + j) != 0)
+//                            cout << i << " " << j << " " << *(plan->h_U_now + i * nnx + j) << endl;
+//                        //cout << *(plan->h_U_now + i * nnx + j) << " ";
+//                }
+//            }
+
 
 			// 一步记录炮集
 			StepShotGather(Pa, plan->h_U_now, plan->h_TrueWF,
@@ -1276,20 +1363,45 @@ void CalTrueWF(AFDPU2D Pa,
 
 			// 一步更新波场U的卷积项 
 			StepPHIU(Pa, plan->h_U_now, plan->h_PHIx_U_x,
-				plan->h_PHIz_U_z, plan->h_Bx, plan->h_Bz);
+                plan->h_PHIz_U_z, plan->h_Bx, plan->h_Bz, it);
+
+//            if(it == 52)
+//            {
+//                for(int i = 117; i < 233; ++i)
+//                {
+//                    for(int j = 0; j < 304; ++j)
+//                        if(*(plan->h_PHIz_U_z + i * nnx + j) != 0)
+//                            cout << i << " " << j << " " << *(plan->h_PHIz_U_z + i * nnx + j) << endl;
+//                        //cout << *(plan->h_PHIz_W_z + i * nnx + j) << " ";
+//                }
+//            }
 
 			// 一步更新波场V和W
 			StepVW(Pa, plan->h_U_now, plan->h_V, plan->h_W,
-				plan->h_PHIx_U_x, plan->h_PHIz_U_z, plan->h_Bx, plan->h_Bz);
+                plan->h_PHIx_U_x, plan->h_PHIz_U_z, plan->h_Bx, plan->h_Bz, it);
+
+
+            //if(pt.getrank() == 2)
+//            if(it == 50)
+//            {
+//                //cout << block_x << endl;
+//                for(int i = 0; i < 117; ++i)
+//                    for(int j = 0; j < 304; ++j)
+//                        if(*(plan->h_W + i * nnx + j))
+//                            cout << i << " " << j << " " << *(plan->h_W + i * nnx + j) << endl;
+//            }
+
 
 			// 一步更新V和W的卷积项
 			StepPHIVW(Pa, plan->h_V, plan->h_W, plan->h_PHIx_V_x,
 				plan->h_PHIz_W_z, plan->h_Bx, plan->h_Bz);
 
+
+
 			// 一步更新波场U
 			StepU(Pa, plan->h_U_next, plan->h_U_now, plan->h_U_past,
 				plan->h_V, plan->h_W, plan->h_PHIx_V_x, plan->h_PHIz_W_z, 
-				plan->h_Bx, plan->h_Bz, plan->h_Vp);
+                plan->h_Bx, plan->h_Bz, plan->h_Vp, it);
 
 			// 加震源 
 			Wavelet = Ricker(Pa.f0, it * Pa.dt);
@@ -1308,10 +1420,15 @@ void CalTrueWF(AFDPU2D Pa,
 		memcpy(sgs_t + is * (Pa.Nt * ip->St[is].rn),
 			plan->h_TrueWF,
 			Pa.Nt * ip->St[is].rn * sizeof(float));
-//                for(int i = 0; i < Pa.Nt * ip->St[is].rn; ++i)
-//                {
-//                    cout << *(sgs_t + i);
-//                }
+
+//        ofstream fout("sgs_t2.txt");
+//        for(int i = 255; i < 510; ++i)
+//        {
+//            for(int j = 0; j < Pa.Nt; ++j)
+//                fout << *(sgs_t + i * Pa.Nt + j) << " ";
+//            //
+//        }
+//        fout << endl;
 	}
 }
 
@@ -1402,11 +1519,11 @@ void CalGrad(AFDPU2D Pa,
 
 			// 一步更新波场U的卷积项 
 			StepPHIU(Pa, plan->h_U_now, plan->h_PHIx_U_x,
-				plan->h_PHIz_U_z, plan->h_Bx, plan->h_Bz);
+                plan->h_PHIz_U_z, plan->h_Bx, plan->h_Bz, it);
 
 			// 一步更新波场V和W
 			StepVW(Pa, plan->h_U_now, plan->h_V, plan->h_W,
-				plan->h_PHIx_U_x, plan->h_PHIz_U_z, plan->h_Bx, plan->h_Bz);
+                plan->h_PHIx_U_x, plan->h_PHIz_U_z, plan->h_Bx, plan->h_Bz, it);
 
 			// 一步更新V和W的卷积项
 			StepPHIVW(Pa, plan->h_V, plan->h_W, plan->h_PHIx_V_x,
@@ -1415,7 +1532,7 @@ void CalGrad(AFDPU2D Pa,
 			// 一步更新波场U
 			StepU(Pa, plan->h_U_next, plan->h_U_now, plan->h_U_past,
 				plan->h_V, plan->h_W, plan->h_PHIx_V_x, plan->h_PHIz_W_z, 
-				plan->h_Bx, plan->h_Bz, plan->h_Vp);
+                plan->h_Bx, plan->h_Bz, plan->h_Vp, it);
 
 			// 加震源 
 			Wavelet = Ricker(Pa.f0, it * Pa.dt);
@@ -1442,6 +1559,19 @@ void CalGrad(AFDPU2D Pa,
 		memcpy(sgs_r + is * (Pa.Nt * ip->St[is].rn),
 			plan->h_ResWF,
 			Pa.Nt * ip->St[is].rn * sizeof(float));
+
+
+//        ofstream fout("h_CurrWF1.txt");
+//        //if(rank == 0)
+//        for(uint i = 0; i < 255; ++i)
+//        {
+//            for(uint j = 0; j < Pa.Nt; ++j)
+//            {
+//                fout << plan->h_CurrWF[i * Pa.Nt + j] << " ";
+//            }
+//        }
+//        fout << endl;
+
 
 		//  残差反传以及正传波场逆时间反推 
 		for (uint it = Pa.Nt - 1; it > 0; it--)
@@ -1501,11 +1631,11 @@ void CalGrad(AFDPU2D Pa,
 
 			// 一步更新波场U的卷积项 
 			StepPHIU(Pa, plan->h_U_now_r, plan->h_PHIx_U_x_r,
-				plan->h_PHIz_U_z_r, plan->h_Bx, plan->h_Bz);
+                plan->h_PHIz_U_z_r, plan->h_Bx, plan->h_Bz, it);
 
 			// 一步更新波场V和W
 			StepVW(Pa, plan->h_U_now_r, plan->h_V_r, plan->h_W_r,
-				plan->h_PHIx_U_x_r, plan->h_PHIz_U_z_r, plan->h_Bx, plan->h_Bz);
+                plan->h_PHIx_U_x_r, plan->h_PHIz_U_z_r, plan->h_Bx, plan->h_Bz, it);
 
 			// 一步更新V和W的卷积项
 			StepPHIVW(Pa, plan->h_V_r, plan->h_W_r, plan->h_PHIx_V_x_r,
@@ -1514,7 +1644,7 @@ void CalGrad(AFDPU2D Pa,
 			// 一步更新波场U
 			StepU(Pa, plan->h_U_next_r, plan->h_U_now_r, plan->h_U_past_r,
 				plan->h_V_r, plan->h_W_r, plan->h_PHIx_V_x_r, plan->h_PHIz_W_z_r, 
-				plan->h_Bx, plan->h_Bz, plan->h_Vp);
+                plan->h_Bx, plan->h_Bz, plan->h_Vp, it);
 
 			// 加震源 
 			AddResidual(Pa, plan->h_ResWF, plan->h_U_next_r, plan->h_re,
@@ -1522,11 +1652,39 @@ void CalGrad(AFDPU2D Pa,
 		}
 
 		// 求取目标函数
-		for (uint m = 0; m < ip->St[is].rn * Pa.Nt; m++)
+        for (uint m = 0; m < 255; ++m)
 		{
-			ip->ObjIter[It] += 0.5f * powf(plan->h_ResWF[m], 2.0f);
+            for(uint mm = 0; mm < Pa.Nt; ++mm)
+                ip->ObjIter[It] += 0.5f * powf(plan->h_ResWF[m * Pa.Nt + mm], 2.0f);
 		}
+        cout << ip->ObjIter[It] << endl;
+        float temp = ip->ObjIter[It];
+        //ofstream fout("test2.txt");
+        //ip->ObjIter[It] = 0;
+        for (uint m = 255; m < 510; ++m)
+        {
+            for(uint mm = 0; mm < Pa.Nt; ++mm)
+            {
+                //fout << 0.5f * powf(plan->h_ResWF[m * Pa.Nt + mm], 2.0f);
+                ip->ObjIter[It] += 0.5f * powf(plan->h_ResWF[m * Pa.Nt + mm], 2.0f);
+            }
+
+        }
+        cout << ip->ObjIter[It] << endl;
+//        ip->ObjIter[It] += temp;
+//        cout << ip->ObjIter[It];
 	}
+
+//    ofstream fout("GradVp0.txt");
+//    for(int i = 0; i < 67; ++i)
+//    {
+//        for(int j = 0; j < 255; ++j)
+//        {
+//            fout << plan->h_Grad[i * Pa.Nx + j] << " ";
+//        }
+//    }
+//    fout << endl;
+
 	// 输出梯度
 	memcpy(ip->GradVp, plan->h_Grad, Pa.Nz * Pa.Nx * sizeof(float));
 }
@@ -1571,6 +1729,8 @@ void CalStepLength(AFDPU2D Pa,
 		}
 	}
 
+    cout << MaxValue << endl;
+
 	// 生成试探个体
 	memset((void *)plan->h_Grad, 0, sizeof(float) * Pa.Nz * Pa.Nx);
 	memcpy(plan->h_Grad, ip->GradVp, sizeof(float) * Pa.Nz * Pa.Nx);
@@ -1612,11 +1772,11 @@ void CalStepLength(AFDPU2D Pa,
 
 			// 一步更新波场U的卷积项 
 			StepPHIU(Pa, plan->h_U_now, plan->h_PHIx_U_x,
-				plan->h_PHIz_U_z, plan->h_Bx, plan->h_Bz);
+                plan->h_PHIz_U_z, plan->h_Bx, plan->h_Bz, it);
 
 			// 一步更新波场V和W
 			StepVW(Pa, plan->h_U_now, plan->h_V, plan->h_W,
-				plan->h_PHIx_U_x, plan->h_PHIz_U_z, plan->h_Bx, plan->h_Bz);
+                plan->h_PHIx_U_x, plan->h_PHIz_U_z, plan->h_Bx, plan->h_Bz, it);
 
 			// 一步更新V和W的卷积项
 			StepPHIVW(Pa, plan->h_V, plan->h_W, plan->h_PHIx_V_x,
@@ -1625,7 +1785,7 @@ void CalStepLength(AFDPU2D Pa,
 			// 一步更新波场U
 			StepU(Pa, plan->h_U_next, plan->h_U_now, plan->h_U_past,
 				plan->h_V, plan->h_W, plan->h_PHIx_V_x, plan->h_PHIz_W_z, 
-				plan->h_Bx, plan->h_Bz, plan->h_Vp);
+                plan->h_Bx, plan->h_Bz, plan->h_Vp, it);
 
 			// 加震源 
 			Wavelet = Ricker(Pa.f0, it * Pa.dt);
@@ -1640,6 +1800,19 @@ void CalStepLength(AFDPU2D Pa,
 		memcpy(plan->h_TrueWF, sgs_t + is * Pa.Nt * ip->St[0].rn,
 			sizeof(float) * Pa.Nt * ip->St[0].rn);
 
+
+//        ofstream fout("h_TrailWF.txt");
+//        ofstream fout1("h_ResWF.txt");
+//        for(int i = 0; i < 255; ++i)
+//        {
+//            for(int j = 0; j < Pa.Nt; ++j)
+//            {
+//                fout << plan->h_TrailWF[i * Pa.Nt + j] << " ";
+//                fout1 << plan->h_ResWF[i * Pa.Nt + j] << " ";
+//            }
+//        }
+
+
 		// 求取上述波场和当前波场的残差
 		MatAdd(plan->h_TrailWF, plan->h_TrailWF, plan->h_CurrWF, 
 			ip->St[0].rn, Pa.Nt, 1.0f, 1.0f, 0);
@@ -1647,6 +1820,15 @@ void CalStepLength(AFDPU2D Pa,
 		// 求取残差波场 
 		StepResidual(Pa, plan->h_TrueWF, plan->h_CurrWF, 
 			plan->h_ResWF, ip->St[is].rn);
+
+        //if(rank == 0)
+//        for(uint i = 0; i < 255; ++i)
+//        {
+//            for(uint j = 0; j < 5; ++j)
+//            {
+//                cout << plan->h_ResWF[i * Pa.Nt + j] << " ";
+//            }
+//        }
 
 		// 将上述两种残差分别累加起来 
 		MatAdd(plan->h_SumResTrial, plan->h_SumResTrial, 
@@ -1656,13 +1838,27 @@ void CalStepLength(AFDPU2D Pa,
 
 	}
 
+//    ofstream fout("h_TrailWF.txt");
+//    ofstream fout1("h_ResWF.txt");
+//    for(int i = 0; i < 255; ++i)
+//    {
+//        for(int j = 0; j < Pa.Nt; ++j)
+//        {
+//            fout << plan->h_TrailWF[i * Pa.Nt + j] << " ";
+//            fout1 << plan->h_ResWF[i * Pa.Nt + j] << " ";
+//        }
+//    }
+
 	// 求取最终的步长 
 	for (uint m = 0; m < Pa.Nt * ip->St[0].rn; m++)
 	{
+
 		fenzi += plan->h_SumResCurr[m] * plan->h_SumResTrial[m];
 		fenmu += plan->h_SumResTrial[m] * plan->h_SumResTrial[m];
 	}
 
+    cout << "fenzi=" << fenzi << endl;
+    cout << "fenmu=" << fenmu << endl;
 	ip->Alpha = (fenzi / fenmu) * e;
 }
 
