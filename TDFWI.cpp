@@ -1666,7 +1666,7 @@ void CalGrad(AFDPU2D Pa,
             for(uint mm = 0; mm < Pa.Nt; ++mm)
             {
                 //fout << 0.5f * powf(plan->h_ResWF[m * Pa.Nt + mm], 2.0f);
-                ip->ObjIter[It] += 0.5f * powf(plan->h_ResWF[m * Pa.Nt + mm], 2.0f);
+                ip->ObjIter[It] = ip->ObjIter[It] + 0.5f * powf(plan->h_ResWF[m * Pa.Nt + mm], 2.0f);
             }
 
         }

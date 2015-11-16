@@ -54,17 +54,23 @@ int main(int argc, char ** argv)
         ip->St[i].rn = 510;
     }
 
-    uint cpu_x = 5, cpu_z = 4;
+    uint cpu_x = 2, cpu_z = 2;
     Partition pt(Pa, ip, nnx, nnz, cpu_x, cpu_z, temph_U, temph_VW, 8, rank, p_size);//borderlength = 4
+
 
     uint length_x = pt.getblockLength_x();
     uint length_z = pt.getblockLength_z();
 
+    //cout << "rank=" << rank << "aaaa" << length_x << " " << length_z << endl;
+
     uint interiorlength_x = pt.getinteriorLength_x();
     uint interiorlength_z = pt.getinteriorLength_z();
 
-//    cout << interiorlength_x << endl;
-//    cout << interiorlength_z << endl;
+    //MPI_Barrier(MPI_COMM_WORLD);
+    if(rank == 0)
+    cout << rank << " " << length_x << endl;
+    MPI_Barrier(MPI_COMM_WORLD);
+    //cout << "rank=" << rank << " " << interiorlength_z << endl;
 
     uint RL_num = pt.getRL_num();
 

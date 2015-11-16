@@ -1910,8 +1910,8 @@ void CalTrueWF(AFDPU2D Pa,
         // 对时间进行循环
         for (uint it = 0; it < Pa.Nt; it++)// Pa.Nt正演的时间步数
         {
-            //if(pt.getrank() == 1)
-                //cout <<it << endl;
+//            if(pt.getrank() == 1)
+//                cout <<it << endl;
 //            if(it == 32)
 //            {
 //                //cout << pt.getindexmin_z() << endl;
@@ -1934,7 +1934,8 @@ void CalTrueWF(AFDPU2D Pa,
                 memcpy(plan->h_U_past + i * block_x, plan->h_U_now + temph_U.leftborder + (i + temph_U.topborder) * temph_U.length_x, block_x * sizeof(float));
                 memcpy(plan->h_U_now + temph_U.leftborder + (i + temph_U.topborder) * temph_U.length_x, plan->h_U_next + i * block_x, block_x * sizeof(float));
             }
-
+//if(rank == ROOT_ID)
+//    cout << it << endl;
             dataTransport(plan->h_U_now, pt, STEP_U, it);//send data
 //cout << pt.getrank() << endl;
 //            if(pos_z % 2)
@@ -2168,8 +2169,11 @@ void CalGrad(AFDPU2D Pa,
 
     uint RecNum = pt.geth_Coord_length();
 
-    // 梯度变量空间清零
-    memset((void *)plan->h_Grad, 0, sizeof(float) * interiorLength_z * interiorLength_x);
+    if(interiorLength_z || interiorLength_x)
+    {
+        // 梯度变量空间清零
+        memset((void *)plan->h_Grad, 0, sizeof(float) * interiorLength_z * interiorLength_x);
+    }
 
     // 给速度赋值
     memset((void *)plan->h_Vp, 0, sizeof(float) * temph_Vp.length_z * temph_Vp.length_x);
@@ -2542,6 +2546,8 @@ void CalStepLength(AFDPU2D Pa,
 
     // 归一化梯度
     float MaxValue = MatMax(ip->GradVp, interiorLength_z * interiorLength_x);
+    //cout << MaxValue << endl;
+
     if(rank != ROOT_ID)
     {
         MPI_Isend(&MaxValue, 1, MPI_FLOAT, ROOT_ID, STEP_MAX, MPI_COMM_WORLD, &request_send);
@@ -2556,9 +2562,11 @@ void CalStepLength(AFDPU2D Pa,
             MaxValue = MatMax(max_buf, rank_size);
         }
     }
+
     MPI_Barrier(MPI_COMM_WORLD);
     MPI_Bcast(&MaxValue, 1, MPI_FLOAT, ROOT_ID, MPI_COMM_WORLD);
 
+    //cout << MaxValue << endl;
     if (MaxValue > 1.0e-10f)
     {
         for (uint m = 0; m < interiorLength_z * interiorLength_x; m++)

@@ -30,6 +30,9 @@ Partition::Partition(const AFDPU2D *Pa, const IP *ip, uint totallength_x, uint t
     this->indexmax_x = this->indexmin_x + blockLength_x - 1 + (blockPosition_x < remainder_x ? 1 : 0);
     this->indexmin_z = blockPosition_z * blockLength_z + (blockPosition_z <= remainder_z ? blockPosition_z : remainder_z);
     this->indexmax_z = this->indexmin_z + this->blockLength_z - 1 + (blockPosition_z < remainder_z ? 1 : 0);
+
+    this->blockLength_x = this->indexmax_x - this->indexmin_x + 1;
+    this->blockLength_z = this->indexmax_z - this->indexmin_z + 1;
     
     this->interiormin_x = this->indexmin_x > Pa->PMLx ? this->indexmin_x : Pa->PMLx;
     this->interiormax_x = this->indexmax_x < Pa->PMLx + Pa->Nx - 1 ? this->indexmax_x : Pa->PMLx + Pa->Nx - 1;
