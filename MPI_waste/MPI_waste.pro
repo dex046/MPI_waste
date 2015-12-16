@@ -39,3 +39,6 @@ unix|win32: LIBS += -lmpichf90
 unix|win32: LIBS += -lmpl
 
 unix|win32: LIBS += -lopa
+
+OTHER_FILES += \
+    information.txt

@@ -23,6 +23,7 @@ Partition::Partition(const AFDPU2D *Pa, const IP *ip, uint totallength_x, uint t
     this->blockLength_x = totallength_x / this->getsumBlock_x();
     this->blockLength_z = totallength_z / this->getsumBlock_z();
 
+
     uint remainder_x = totallength_x % this->getsumBlock_x();
     uint remainder_z = totallength_z % this->getsumBlock_z();
 
@@ -62,7 +63,7 @@ Partition::Partition(const AFDPU2D *Pa, const IP *ip, uint totallength_x, uint t
     this->h_VW.length_z = this->blockLength_z + h_VW.topborder + h_VW.bottomborder;
 
     seth_Vp_trans(*Pa);
-    seth_Vp_border(*Pa);
+    seth_Vp_border(*Pa);//cout << rank << endl;
     setInside(*Pa);
     set_h_Coord(*Pa);
     setRL(ip, Pa);
@@ -259,36 +260,64 @@ uint Partition::getRL_endnum() const
 }
 void Partition::seth_Vp_trans(AFDPU2D Pa)
 {
-    if(this->indexmin_z <= Pa.PMLz && this->indexmax_z >= Pa.PMLz)//to top
+    if(!this->isfirstblock_z())
     {
-        this->trans_h_Vp.push_back(1);
+        if(this->indexmin_z <= Pa.PMLz && this->indexmax_z >= Pa.PMLz)//to top
+        {
+            this->trans_h_Vp.push_back(1);
+        }
+        else
+        {
+            this->trans_h_Vp.push_back(0);
+        }
     }
     else
     {
         this->trans_h_Vp.push_back(0);
     }
 
-    if(this->indexmin_x <= Pa.PMLx && this->indexmax_x >= Pa.PMLx)//to left
+    if(!this->isfirstblock_x())
     {
-        this->trans_h_Vp.push_back(1);
+        if(this->indexmin_x <= Pa.PMLx && this->indexmax_x >= Pa.PMLx)//to left
+        {
+            this->trans_h_Vp.push_back(1);
+        }
+        else
+        {
+            this->trans_h_Vp.push_back(0);
+        }
     }
     else
     {
         this->trans_h_Vp.push_back(0);
     }
 
-    if(this->indexmin_z < Pa.PMLz + Pa.Nz && this->indexmax_z >= Pa.PMLz + Pa.Nz - 1)//to bottom
+    if(!this->islastblock_z())
     {
-        this->trans_h_Vp.push_back(1);
+        if(this->indexmin_z < Pa.PMLz + Pa.Nz && this->indexmax_z >= Pa.PMLz + Pa.Nz - 1)//to bottom
+        {
+            this->trans_h_Vp.push_back(1);
+        }
+        else
+        {
+            this->trans_h_Vp.push_back(0);
+        }
     }
     else
     {
         this->trans_h_Vp.push_back(0);
     }
 
-    if(this->indexmin_x < Pa.PMLx + Pa.Nx && this->indexmax_x >= Pa.PMLx + Pa.Nx - 1)//to right
+    if(!this->islastblock_x())
     {
-        this->trans_h_Vp.push_back(1);
+        if(this->indexmin_x < Pa.PMLx + Pa.Nx && this->indexmax_x >= Pa.PMLx + Pa.Nx - 1)//to right
+        {
+            this->trans_h_Vp.push_back(1);
+        }
+        else
+        {
+            this->trans_h_Vp.push_back(0);
+        }
     }
     else
     {
@@ -377,8 +406,10 @@ void Partition::seth_Vp_border(AFDPU2D Pa)
     this->h_Vp.length_z = this->h_Vp.topborder + this->blockLength_z + this->h_Vp.bottomborder;
 }
 void Partition::setInside(AFDPU2D Pa)
-{
-    if(indexmin_x > Pa.Nx + Pa.PMLx || indexmax_x < Pa.PMLx || indexmin_z > Pa.Nz + Pa.PMLz || indexmax_z < Pa.PMLz)
+{//cout << rank << endl;
+//    if(rank == 6)
+//        cout << indexmin_x << " " << indexmax_x << " " << indexmin_z << " " << indexmax_z << endl;
+    if(indexmin_x >= Pa.Nx + Pa.PMLx || indexmax_x < Pa.PMLx || indexmin_z >= Pa.Nz + Pa.PMLz || indexmax_z < Pa.PMLz)
     {
         this->iscoverbyNPML = true;
         this->inside_num = 1;
@@ -394,335 +425,412 @@ void Partition::setInside(AFDPU2D Pa)
     else
     {
         this->iscoverbyNPML = false;
-        if(indexmin_x < Pa.PMLx && indexmin_z < Pa.PMLz)
+        if(indexmin_x < Pa.PMLx/* && indexmin_z < Pa.PMLz*/)
         {
-            if(indexmax_x < Pa.PMLx + Pa.Nx && indexmax_z < Pa.PMLz + Pa.Nz)
+            if(indexmax_x < Pa.PMLx + Pa.Nx)
             {
-                this->inside_num = 2;
-                Inside *ins = new Inside[this->inside_num];
-                ins[0].indexmin_x = this->indexmin_x;
-                ins[0].indexmin_z = this->indexmin_z;
-                ins[0].indexmax_x = Pa.PMLx - 1;
-                ins[0].indexmax_z = this->indexmax_z;
-                ins[0].length_x = ins[0].getindexmax_x() - ins[0].getindexmin_x() + 1;
-                ins[0].length_z = ins[0].getindexmax_z() - ins[0].getindexmin_z() + 1;
+                if(indexmin_z < Pa.PMLz)
+                {
+                    if(indexmax_z < Pa.PMLz + Pa.Nz)
+                    {
+                        this->inside_num = 2;
+                        Inside *ins = new Inside[this->inside_num];
+                        ins[0].indexmin_x = this->indexmin_x;
+                        ins[0].indexmin_z = this->indexmin_z;
+                        ins[0].indexmax_x = Pa.PMLx - 1;
+                        ins[0].indexmax_z = this->indexmax_z;
+                        ins[0].length_x = ins[0].getindexmax_x() - ins[0].getindexmin_x() + 1;
+                        ins[0].length_z = ins[0].getindexmax_z() - ins[0].getindexmin_z() + 1;
 
-                ins[1].indexmin_x = Pa.PMLx;
-                ins[1].indexmin_z = this->indexmin_z;
-                ins[1].indexmax_x = this->indexmax_x;
-                ins[1].indexmax_z = Pa.PMLz - 1;
-                ins[1].length_x = ins[1].getindexmax_x() - ins[1].getindexmin_x() + 1;
-                ins[1].length_z = ins[1].getindexmax_z() - ins[1].getindexmin_z() + 1;
+                        ins[1].indexmin_x = Pa.PMLx;
+                        ins[1].indexmin_z = this->indexmin_z;
+                        ins[1].indexmax_x = this->indexmax_x;
+                        ins[1].indexmax_z = Pa.PMLz - 1;
+                        ins[1].length_x = ins[1].getindexmax_x() - ins[1].getindexmin_x() + 1;
+                        ins[1].length_z = ins[1].getindexmax_z() - ins[1].getindexmin_z() + 1;
 
 
-                this->inside = ins;
+                        this->inside = ins;
+                    }
+                    else
+                    {
+                        this->inside_num = 3;
+                        Inside *ins = new Inside[this->inside_num];
+                        ins[0].indexmin_x = this->indexmin_x;
+                        ins[0].indexmax_x = this->indexmax_x;
+                        ins[0].indexmin_z = this->indexmin_z;
+                        ins[0].indexmax_z = Pa.PMLz - 1;
+                        ins[0].length_x = ins[0].getindexmax_x() - ins[0].getindexmin_x() + 1;
+                        ins[0].length_z = ins[0].getindexmax_z() - ins[0].getindexmin_z() + 1;
+
+
+                        ins[1].indexmin_x = this->indexmin_x;
+                        ins[1].indexmax_x = Pa.PMLx - 1;
+                        ins[1].indexmin_z = Pa.PMLz;
+                        ins[1].indexmax_z = Pa.PMLz + Pa.Nz - 1;
+                        ins[1].length_x = ins[1].getindexmax_x() - ins[1].getindexmin_x() + 1;
+                        ins[1].length_z = ins[1].getindexmax_z() - ins[1].getindexmin_z() + 1;
+
+                        ins[2].indexmin_x = this->indexmin_x;
+                        ins[2].indexmax_x = this->indexmax_x;
+                        ins[2].indexmin_z = Pa.PMLz + Pa.Nz;
+                        ins[2].indexmax_z = this->indexmax_z;
+                        ins[2].length_x = ins[2].getindexmax_x() - ins[2].getindexmin_x() + 1;
+                        ins[2].length_z = ins[2].getindexmax_z() - ins[2].getindexmin_z() + 1;
+
+                        this->inside = ins;
+                    }
+                }
+                else if(indexmin_z >= Pa.PMLz && indexmin_z < Pa.PMLz + Pa.Nz)
+                {
+                    if(indexmax_z < Pa.PMLz + Pa.Nz)
+                    {
+                        this->inside_num = 1;
+                        Inside *ins = new Inside[this->inside_num];
+                        ins[0].indexmin_x = this->indexmin_x;
+                        ins[0].indexmax_x = Pa.PMLx - 1;
+                        ins[0].indexmin_z = this->indexmin_z;
+                        ins[0].indexmax_z = this->indexmax_z;
+                        ins[0].length_x = ins[0].getindexmax_x() - ins[0].getindexmin_x() + 1;
+                        ins[0].length_z = ins[0].getindexmax_z() - ins[0].getindexmin_z() + 1;
+
+
+                        this->inside = ins;
+                    }
+                    else
+                    {
+                        this->inside_num = 2;
+                        Inside *ins = new Inside[this->inside_num];
+                        ins[0].indexmin_x = this->indexmin_x;
+                        ins[0].indexmax_x = Pa.PMLx - 1;
+                        ins[0].indexmin_z = this->indexmin_z;
+                        ins[0].indexmax_z = this->indexmax_z;
+                        ins[0].length_x = ins[0].getindexmax_x() - ins[0].getindexmin_x() + 1;
+                        ins[0].length_z = ins[0].getindexmax_z() - ins[0].getindexmin_z() + 1;
+
+
+                        ins[1].indexmin_x = Pa.PMLx;
+                        ins[1].indexmax_x = this->indexmax_x;
+                        ins[1].indexmin_z = Pa.Nz + Pa.PMLz;
+                        ins[1].indexmax_z = this->indexmax_z;
+                        ins[1].length_x = ins[1].getindexmax_x() - ins[1].getindexmin_x() + 1;
+                        ins[1].length_z = ins[1].getindexmax_z() - ins[1].getindexmin_z() + 1;
+
+                        this->inside = ins;
+                    }
+                }
+                else
+                {
+                    cout << "error" << endl;
+                }
+            }
+            else if(indexmax_x >= Pa.PMLx + Pa.Nx)
+            {
+                if(indexmin_z < Pa.PMLz)
+                {
+                    if(indexmax_z < Pa.PMLz + Pa.Nz)
+                    {
+                        this->inside_num = 3;
+                        Inside *ins = new Inside[this->inside_num];
+                        ins[0].indexmin_x = this->indexmin_x;
+                        ins[0].indexmax_x = Pa.PMLx - 1;
+                        ins[0].indexmin_z = Pa.PMLz;
+                        ins[0].indexmax_z = this->indexmax_z;
+                        ins[0].length_x = ins[0].getindexmax_x() - ins[0].getindexmin_x() + 1;
+                        ins[0].length_z = ins[0].getindexmax_z() - ins[0].getindexmin_z() + 1;
+
+                        ins[1].indexmin_x = Pa.PMLx;
+                        ins[1].indexmax_x = Pa.PMLx + Pa.Nx - 1;
+                        ins[1].indexmin_z = this->indexmin_z;
+                        ins[1].indexmax_z = Pa.PMLz + Pa.Nz - 1;
+                        ins[1].length_x = ins[1].getindexmax_x() - ins[1].getindexmin_x() + 1;
+                        ins[1].length_z = ins[1].getindexmax_z() - ins[1].getindexmin_z() + 1;
+
+                        ins[2].indexmin_x = Pa.PMLx + Pa.Nx;
+                        ins[2].indexmax_x = this->indexmax_x;
+                        ins[2].indexmin_z = Pa.PMLz + Pa.Nz;
+                        ins[2].indexmax_z = this->indexmax_z;
+                        ins[2].length_x = ins[2].getindexmax_x() - ins[2].getindexmin_x() + 1;
+                        ins[2].length_z = ins[2].getindexmax_z() - ins[2].getindexmin_z() + 1;
+
+                        this->inside = ins;
+                    }
+                    else
+                    {
+                        this->inside_num = 4;
+                        Inside *ins = new Inside[this->inside_num];
+                        ins[0].indexmin_x = this->indexmin_x;
+                        ins[0].indexmax_x = Pa.PMLx - 1;
+                        ins[0].indexmin_z = this->indexmin_z;
+                        ins[0].indexmax_z = this->indexmax_z;
+                        ins[0].length_x = ins[0].getindexmax_x() - ins[0].getindexmin_x() + 1;
+                        ins[0].length_z = ins[0].getindexmax_z() - ins[0].getindexmin_z() + 1;
+
+
+                        ins[1].indexmin_x = Pa.PMLx;
+                        ins[1].indexmax_x = Pa.PMLx + Pa.Nx - 1;
+                        ins[1].indexmin_z = Pa.PMLz + Pa.Nz;
+                        ins[1].indexmax_z = this->indexmax_z;
+                        ins[1].length_x = ins[1].getindexmax_x() - ins[1].getindexmin_x() + 1;
+                        ins[1].length_z = ins[1].getindexmax_z() - ins[1].getindexmin_z() + 1;
+
+                        ins[2].indexmin_x = Pa.PMLx + Pa.Nx;
+                        ins[2].indexmax_x = this->indexmax_x;
+                        ins[2].indexmin_z = this->indexmin_z;
+                        ins[2].indexmax_z = this->indexmax_z;
+                        ins[2].length_x = ins[2].getindexmax_x() - ins[2].getindexmin_x() + 1;
+                        ins[2].length_z = ins[2].getindexmax_z() - ins[2].getindexmin_z() + 1;
+
+                        ins[3].indexmin_x = Pa.PMLx;
+                        ins[3].indexmax_x = Pa.PMLx + Pa.Nx - 1;
+                        ins[3].indexmin_z = this->indexmin_z;
+                        ins[3].indexmax_z = Pa.PMLz - 1;
+                        ins[3].length_x = ins[3].getindexmax_x() - ins[3].getindexmin_x() + 1;
+                        ins[3].length_z = ins[3].getindexmax_z() - ins[3].getindexmin_z() + 1;
+
+                        this->inside = ins;
+                    }
+                }
+                else if(indexmin_z >= Pa.PMLz && indexmin_z < Pa.PMLz + Pa.Nz)
+                {
+                    if(indexmax_z < Pa.PMLz + Pa.Nz)
+                    {
+                        this->inside_num = 2;
+                        Inside *ins = new Inside[this->inside_num];
+                        ins[0].indexmin_x = this->indexmin_x;
+                        ins[0].indexmax_x = Pa.PMLx - 1;
+                        ins[0].indexmin_z = this->indexmin_z;
+                        ins[0].indexmax_z = this->indexmax_z;
+                        ins[0].length_x = ins[0].getindexmax_x() - ins[0].getindexmin_x() + 1;
+                        ins[0].length_z = ins[0].getindexmax_z() - ins[0].getindexmin_z() + 1;
+
+
+                        ins[1].indexmin_x = Pa.PMLx + Pa.Nx;
+                        ins[1].indexmax_x = this->indexmax_x;
+                        ins[1].indexmin_z = this->indexmin_z;
+                        ins[1].indexmax_z = this->indexmax_z;
+                        ins[1].length_x = ins[1].getindexmax_x() - ins[1].getindexmin_x() + 1;
+                        ins[1].length_z = ins[1].getindexmax_z() - ins[1].getindexmin_z() + 1;
+
+                        this->inside = ins;
+                    }
+                    else
+                    {
+                        this->inside_num = 3;
+                        Inside *ins = new Inside[this->inside_num];
+                        ins[0].indexmin_x = this->indexmin_x;
+                        ins[0].indexmax_x = Pa.PMLx - 1;
+                        ins[0].indexmin_z = this->indexmin_z;
+                        ins[0].indexmax_z = Pa.PMLz + Pa.Nz - 1;
+                        ins[0].length_x = ins[0].getindexmax_x() - ins[0].getindexmin_x() + 1;
+                        ins[0].length_z = ins[0].getindexmax_z() - ins[0].getindexmin_z() + 1;
+
+
+                        ins[1].indexmin_x = Pa.PMLx;
+                        ins[1].indexmax_x = Pa.PMLx + Pa.Nx - 1;
+                        ins[1].indexmin_z = Pa.PMLz + Pa.Nz;
+                        ins[1].indexmax_z = this->indexmax_z;
+                        ins[1].length_x = ins[1].getindexmax_x() - ins[1].getindexmin_x() + 1;
+                        ins[1].length_z = ins[1].getindexmax_z() - ins[1].getindexmin_z() + 1;
+
+                        ins[2].indexmin_x = Pa.PMLx + Pa.Nx;
+                        ins[2].indexmax_x = this->indexmax_x;
+                        ins[2].indexmin_z = this->indexmin_z;
+                        ins[2].indexmax_z = Pa.PMLz + Pa.Nz - 1;
+                        ins[2].length_x = ins[2].getindexmax_x() - ins[2].getindexmin_x() + 1;
+                        ins[2].length_z = ins[2].getindexmax_z() - ins[2].getindexmin_z() + 1;
+
+                        this->inside = ins;
+                    }
+                }
+                else
+                {
+                    cout << "error" << endl;
+                }
             }
             else
             {
-                ///tai da meiyiyi
+                cout << "error" << endl;
             }
         }
-        else if(indexmin_x < Pa.PMLx && indexmax_z >= Pa.PMLz + Pa.Nz)
+        else if(indexmin_x >= Pa.PMLx && indexmin_x < Pa.PMLx + Pa.Nx)
         {
-            if(indexmax_x < Pa.PMLx + Pa.Nx && indexmin_z >= Pa.PMLz)
+            if(indexmax_x < Pa.PMLx + Pa.Nx)
             {
-                this->inside_num = 2;
-                Inside *ins = new Inside[this->inside_num];
-                ins[0].indexmin_x = this->indexmin_x;
-                ins[0].indexmax_x = Pa.PMLx - 1;
-                ins[0].indexmin_z = this->indexmin_z;
-                ins[0].indexmax_z = this->indexmax_z;
-                ins[0].length_x = ins[0].getindexmax_x() - ins[0].getindexmin_x() + 1;
-                ins[0].length_z = ins[0].getindexmax_z() - ins[0].getindexmin_z() + 1;
+                if(indexmin_z < Pa.PMLz)
+                {
+                    if(indexmax_z < Pa.PMLz + Pa.Nz)
+                    {
+                        this->inside_num = 1;
+                        Inside *ins = new Inside[this->inside_num];
+                        ins[0].indexmin_x = this->indexmin_x;
+                        ins[0].indexmax_x = this->indexmax_x;
+                        ins[0].indexmin_z = this->indexmin_z;
+                        ins[0].indexmax_z = Pa.PMLz - 1;
+                        ins[0].length_x = ins[0].getindexmax_x() - ins[0].getindexmin_x() + 1;
+                        ins[0].length_z = ins[0].getindexmax_z() - ins[0].getindexmin_z() + 1;
+
+                        this->inside = ins;
+                    }
+                    else
+                    {
+                        this->inside_num = 2;
+                        Inside *ins = new Inside[this->inside_num];
+                        ins[0].indexmin_x = this->indexmin_x;
+                        ins[0].indexmax_x = this->indexmax_x;
+                        ins[0].indexmin_z = this->indexmin_z;
+                        ins[0].indexmax_z = Pa.PMLz - 1;
+                        ins[0].length_x = ins[0].getindexmax_x() - ins[0].getindexmin_x() + 1;
+                        ins[0].length_z = ins[0].getindexmax_z() - ins[0].getindexmin_z() + 1;
+
+                        ins[1].indexmin_x = this->indexmin_x;
+                        ins[1].indexmax_x = this->indexmax_x;
+                        ins[1].indexmin_z = Pa.PMLz + Pa.Nz;
+                        ins[1].indexmax_z = this->indexmax_z;
+                        ins[1].length_x = ins[1].getindexmax_x() - ins[1].getindexmin_x() + 1;
+                        ins[1].length_z = ins[1].getindexmax_z() - ins[1].getindexmin_z() + 1;
+
+                        this->inside = ins;
+                    }
+                }
+                else if(indexmin_z >= Pa.PMLz && indexmin_z < Pa.PMLz + Pa.Nz)
+                {
+                    if(indexmax_z < Pa.PMLz + Pa.Nz)
+                    {
+                        this->inside_num = 0;
+                        this->inside = NULL;
+                    }
+                    else
+                    {
+                        this->inside_num = 1;
+                        Inside *ins = new Inside[this->inside_num];
+                        ins[0].indexmin_x = this->indexmin_x;
+                        ins[0].indexmax_x = this->indexmax_x;
+                        ins[0].indexmin_z = Pa.PMLz + Pa.Nz;
+                        ins[0].indexmax_z = this->indexmax_z;
+                        ins[0].length_x = ins[0].getindexmax_x() - ins[0].getindexmin_x() + 1;
+                        ins[0].length_z = ins[0].getindexmax_z() - ins[0].getindexmin_z() + 1;
 
 
-                ins[1].indexmin_x = Pa.PMLx;
-                ins[1].indexmax_x = this->indexmax_x;
-                ins[1].indexmin_z = Pa.Nz + Pa.PMLz;
-                ins[1].indexmax_z = this->indexmax_z;
-                ins[1].length_x = ins[1].getindexmax_x() - ins[1].getindexmin_x() + 1;
-                ins[1].length_z = ins[1].getindexmax_z() - ins[1].getindexmin_z() + 1;
+                        this->inside = ins;
+                    }
+                }
+                else
+                {
+                    cout << "error" << endl;
+                }
+            }
+            else if(indexmax_x >= Pa.PMLx + Pa.Nx)
+            {
+                if(indexmin_z < Pa.PMLz)
+                {
+                    if(indexmax_z < Pa.PMLz + Pa.Nz)
+                    {
+                        this->inside_num = 2;
+                        Inside *ins = new Inside[this->inside_num];
+                        ins[0].indexmin_x = this->indexmin_x;
+                        ins[0].indexmax_x = Pa.Nx + Pa.PMLx - 1;
+                        ins[0].indexmin_z = this->indexmin_z;
+                        ins[0].indexmax_z = Pa.Nz - 1;
+                        ins[0].length_x = ins[0].getindexmax_x() - ins[0].getindexmin_x() + 1;
+                        ins[0].length_z = ins[0].getindexmax_z() - ins[0].getindexmin_z() + 1;
 
-                this->inside = ins;
+
+                        ins[1].indexmin_x = Pa.Nx + Pa.PMLx;
+                        ins[1].indexmin_z = this->indexmin_z;
+                        ins[1].indexmax_x = this->indexmax_x;
+                        ins[1].indexmax_z = this->indexmax_z;
+                        ins[1].length_x = ins[1].getindexmax_x() - ins[1].getindexmin_x() + 1;
+                        ins[1].length_z = ins[1].getindexmax_z() - ins[1].getindexmin_z() + 1;
+
+                        this->inside = ins;
+                    }
+                    else
+                    {
+                        this->inside_num = 3;
+                        Inside *ins = new Inside[this->inside_num];
+                        ins[0].indexmin_x = this->indexmin_x;
+                        ins[0].indexmax_x = this->indexmax_x;
+                        ins[0].indexmin_z = this->indexmin_z;
+                        ins[0].indexmax_z = Pa.PMLz - 1;
+                        ins[0].length_x = ins[0].getindexmax_x() - ins[0].getindexmin_x() + 1;
+                        ins[0].length_z = ins[0].getindexmax_z() - ins[0].getindexmin_z() + 1;
+
+
+                        ins[1].indexmin_x = Pa.PMLx + Pa.Nx;
+                        ins[1].indexmax_x = this->indexmax_x;
+                        ins[1].indexmin_z = Pa.PMLz;
+                        ins[1].indexmax_z = Pa.PMLz + Pa.Nz - 1;
+                        ins[1].length_x = ins[1].getindexmax_x() - ins[1].getindexmin_x() + 1;
+                        ins[1].length_z = ins[1].getindexmax_z() - ins[1].getindexmin_z() + 1;
+
+                        ins[2].indexmin_x = this->indexmin_x;
+                        ins[2].indexmax_x = this->indexmax_x;
+                        ins[2].indexmin_z = Pa.PMLz + Pa.Nz;
+                        ins[2].indexmax_z = this->indexmax_z;
+                        ins[2].length_x = ins[2].getindexmax_x() - ins[2].getindexmin_x() + 1;
+                        ins[2].length_z = ins[2].getindexmax_z() - ins[2].getindexmin_z() + 1;
+
+                        this->inside = ins;
+                    }
+                }
+                else if(indexmin_z >= Pa.PMLz && indexmin_z < Pa.PMLz + Pa.Nz)
+                {
+                    if(indexmax_z < Pa.PMLz + Pa.Nz)
+                    {
+                        this->inside_num = 1;
+                        Inside *ins = new Inside[this->inside_num];
+                        ins[0].indexmin_x = Pa.PMLx + Pa.Nx;
+                        ins[0].indexmax_x = this->indexmax_x;
+                        ins[0].indexmin_z = this->indexmin_z;
+                        ins[0].indexmax_z = this->indexmax_z;
+                        ins[0].length_x = ins[0].getindexmax_x() - ins[0].getindexmin_x() + 1;
+                        ins[0].length_z = ins[0].getindexmax_z() - ins[0].getindexmin_z() + 1;
+
+
+                        this->inside = ins;
+                    }
+                    else
+                    {
+                        this->inside_num = 2;
+                        Inside *ins = new Inside[this->inside_num];
+                        ins[0].indexmin_x = this->indexmin_x;
+                        ins[0].indexmax_x = Pa.Nx + Pa.PMLx - 1;
+                        ins[0].indexmin_z = Pa.Nz + Pa.PMLz;
+                        ins[0].indexmax_z = this->indexmax_z;
+                        ins[0].length_x = ins[0].getindexmax_x() - ins[0].getindexmin_x() + 1;
+                        ins[0].length_z = ins[0].getindexmax_z() - ins[0].getindexmin_z() + 1;
+
+
+                        ins[1].indexmin_x = Pa.Nx + Pa.PMLx;
+                        ins[1].indexmax_x = Pa.Nx + Pa.PMLx;
+                        ins[1].indexmin_z = this->indexmin_z;
+                        ins[1].indexmax_z = this->indexmax_z;
+                        ins[1].length_x = ins[1].getindexmax_x() - ins[1].getindexmin_x() + 1;
+                        ins[1].length_z = ins[1].getindexmax_z() - ins[1].getindexmin_z() + 1;
+
+                        this->inside = ins;
+                    }
+                }
+                else
+                {
+                    cout << "error" << endl;
+                }
             }
             else
             {
-
-            }
-        }
-        else if(indexmax_x >= Pa.PMLx + Pa.Nx && indexmin_z < Pa.PMLz)
-        {
-            if(indexmin_x >= Pa.PMLx && indexmax_z < Pa.Nz + Pa.PMLz)
-            {
-                this->inside_num = 2;
-                Inside *ins = new Inside[this->inside_num];
-                ins[0].indexmin_x = this->indexmin_x;
-                ins[0].indexmax_x = Pa.Nx + Pa.PMLx - 1;
-                ins[0].indexmin_z = this->indexmin_z;
-                ins[0].indexmax_z = Pa.Nz - 1;
-                ins[0].length_x = ins[0].getindexmax_x() - ins[0].getindexmin_x() + 1;
-                ins[0].length_z = ins[0].getindexmax_z() - ins[0].getindexmin_z() + 1;
-
-
-                ins[1].indexmin_x = Pa.Nx + Pa.PMLx;
-                ins[1].indexmin_z = this->indexmin_z;
-                ins[1].indexmax_x = this->indexmax_x;
-                ins[1].indexmax_z = this->indexmax_z;
-                ins[1].length_x = ins[1].getindexmax_x() - ins[1].getindexmin_x() + 1;
-                ins[1].length_z = ins[1].getindexmax_z() - ins[1].getindexmin_z() + 1;
-
-                this->inside = ins;
-            }
-            else
-            {
-
-            }
-        }
-        else if(indexmax_x >= Pa.PMLx + Pa.Nx && indexmax_z >= Pa.PMLz + Pa.Nz)
-        {
-            if(indexmin_x < Pa.Nx && indexmin_z < Pa.Nz)
-            {
-                this->inside_num = 2;
-                Inside *ins = new Inside[this->inside_num];
-                ins[0].indexmin_x = this->indexmin_x;
-                ins[0].indexmax_x = Pa.Nx + Pa.PMLx - 1;
-                ins[0].indexmin_z = Pa.Nz + Pa.PMLz;
-                ins[0].indexmax_z = this->indexmax_z;
-                ins[0].length_x = ins[0].getindexmax_x() - ins[0].getindexmin_x() + 1;
-                ins[0].length_z = ins[0].getindexmax_z() - ins[0].getindexmin_z() + 1;
-
-
-                ins[1].indexmin_x = Pa.Nx + Pa.PMLx;
-                ins[1].indexmax_x = Pa.Nx + Pa.PMLx;
-                ins[1].indexmin_z = this->indexmin_z;
-                ins[1].indexmax_z = this->indexmax_z;
-                ins[1].length_x = ins[1].getindexmax_x() - ins[1].getindexmin_x() + 1;
-                ins[1].length_z = ins[1].getindexmax_z() - ins[1].getindexmin_z() + 1;
-
-                this->inside = ins;
-            }
-            else
-            {
-
-            }
-        }
-        else if(indexmin_x < Pa.PMLx && indexmax_x >= Pa.PMLx)
-        {
-            if(indexmax_x < Pa.PMLz + Pa.Nz)
-            {
-                if(indexmin_z >= Pa.PMLz && indexmax_z < Pa.PMLz + Pa.Nz)
-                {
-                    this->inside_num = 1;
-                    Inside *ins = new Inside[this->inside_num];
-                    ins[0].indexmin_x = this->indexmin_x;
-                    ins[0].indexmax_x = Pa.PMLx - 1;
-                    ins[0].indexmin_z = this->indexmin_z;
-                    ins[0].indexmax_z = this->indexmax_z;
-                    ins[0].length_x = ins[0].getindexmax_x() - ins[0].getindexmin_x() + 1;
-                    ins[0].length_z = ins[0].getindexmax_z() - ins[0].getindexmin_z() + 1;
-
-
-                    this->inside = ins;
-                }
-                else if(indexmin_z < Pa.PMLz && indexmax_z >= Pa.PMLz + Pa.Nz)
-                {
-                    this->inside_num = 3;
-                    Inside *ins = new Inside[this->inside_num];
-                    ins[0].indexmin_x = this->indexmin_x;
-                    ins[0].indexmax_x = this->indexmax_x;
-                    ins[0].indexmin_z = this->indexmin_z;
-                    ins[0].indexmax_z = Pa.PMLz - 1;
-                    ins[0].length_x = ins[0].getindexmax_x() - ins[0].getindexmin_x() + 1;
-                    ins[0].length_z = ins[0].getindexmax_z() - ins[0].getindexmin_z() + 1;
-
-
-                    ins[1].indexmin_x = this->indexmin_x;
-                    ins[1].indexmax_x = Pa.PMLx - 1;
-                    ins[1].indexmin_z = Pa.PMLz;
-                    ins[1].indexmax_z = Pa.PMLz + Pa.Nz - 1;
-                    ins[1].length_x = ins[1].getindexmax_x() - ins[1].getindexmin_x() + 1;
-                    ins[1].length_z = ins[1].getindexmax_z() - ins[1].getindexmin_z() + 1;
-
-                    ins[2].indexmin_x = this->indexmin_x;
-                    ins[2].indexmax_x = this->indexmax_x;
-                    ins[2].indexmin_z = Pa.PMLz + Pa.Nz;
-                    ins[2].indexmax_z = this->indexmax_z;
-                    ins[2].length_x = ins[2].getindexmax_x() - ins[2].getindexmin_x() + 1;
-                    ins[2].length_z = ins[2].getindexmax_z() - ins[2].getindexmin_z() + 1;
-
-                    this->inside = ins;
-                }
-            }
-            else
-            {
-                if(indexmin_z >= Pa.PMLz && indexmax_z < Pa.PMLz + Pa.Nz)
-                {
-                    this->inside_num = 2;
-                    Inside *ins = new Inside[this->inside_num];
-                    ins[0].indexmin_x = this->indexmin_x;
-                    ins[0].indexmax_x = Pa.PMLx - 1;
-                    ins[0].indexmin_z = this->indexmin_z;
-                    ins[0].indexmax_z = this->indexmax_z;
-                    ins[0].length_x = ins[0].getindexmax_x() - ins[0].getindexmin_x() + 1;
-                    ins[0].length_z = ins[0].getindexmax_z() - ins[0].getindexmin_z() + 1;
-
-
-                    ins[1].indexmin_x = Pa.PMLx + Pa.Nx;
-                    ins[1].indexmax_x = this->indexmax_x;
-                    ins[1].indexmin_z = this->indexmin_z;
-                    ins[1].indexmax_z = this->indexmax_z;
-                    ins[1].length_x = ins[1].getindexmax_x() - ins[1].getindexmin_x() + 1;
-                    ins[1].length_z = ins[1].getindexmax_z() - ins[1].getindexmin_z() + 1;
-
-                    this->inside = ins;
-                }
-                else if(indexmin_z < Pa.PMLz && indexmax_z >= Pa.PMLz + Pa.Nz)
-                {
-                    this->inside_num = 4;
-                    Inside *ins = new Inside[this->inside_num];
-                    ins[0].indexmin_x = this->indexmin_x;
-                    ins[0].indexmax_x = Pa.PMLx - 1;
-                    ins[0].indexmin_z = this->indexmin_z;
-                    ins[0].indexmax_z = this->indexmax_z;
-                    ins[0].length_x = ins[0].getindexmax_x() - ins[0].getindexmin_x() + 1;
-                    ins[0].length_z = ins[0].getindexmax_z() - ins[0].getindexmin_z() + 1;
-
-
-                    ins[1].indexmin_x = Pa.PMLx;
-                    ins[1].indexmax_x = Pa.PMLx + Pa.Nx - 1;
-                    ins[1].indexmin_z = Pa.PMLz + Pa.Nz;
-                    ins[1].indexmax_z = this->indexmax_z;
-                    ins[1].length_x = ins[1].getindexmax_x() - ins[1].getindexmin_x() + 1;
-                    ins[1].length_z = ins[1].getindexmax_z() - ins[1].getindexmin_z() + 1;
-
-                    ins[2].indexmin_x = Pa.PMLx + Pa.Nx;
-                    ins[2].indexmax_x = this->indexmax_x;
-                    ins[2].indexmin_z = this->indexmin_z;
-                    ins[2].indexmax_z = this->indexmax_z;
-                    ins[2].length_x = ins[2].getindexmax_x() - ins[2].getindexmin_x() + 1;
-                    ins[2].length_z = ins[2].getindexmax_z() - ins[2].getindexmin_z() + 1;
-
-                    ins[3].indexmin_x = Pa.PMLx;
-                    ins[3].indexmax_x = Pa.PMLx + Pa.Nx - 1;
-                    ins[3].indexmin_z = this->indexmin_z;
-                    ins[3].indexmax_z = Pa.PMLz - 1;
-                    ins[3].length_x = ins[3].getindexmax_x() - ins[3].getindexmin_x() + 1;
-                    ins[3].length_z = ins[3].getindexmax_z() - ins[3].getindexmin_z() + 1;
-
-                    this->inside = ins;
-                }
-            }
-        }
-        else if(indexmin_x >= Pa.PMLx && indexmin_x < Pa.PMLx + Pa.Nx && indexmax_x >= Pa.PMLx + Pa.Nx)
-        {
-            if(indexmin_z >= Pa.PMLz && indexmax_z < Pa.PMLz + Pa.Nz)
-            {
-                this->inside_num = 1;
-                Inside *ins = new Inside[this->inside_num];
-                ins[0].indexmin_x = Pa.PMLx + Pa.Nx;
-                ins[0].indexmax_x = this->indexmax_x;
-                ins[0].indexmin_z = this->indexmin_z;
-                ins[0].indexmax_z = this->indexmax_z;
-                ins[0].length_x = ins[0].getindexmax_x() - ins[0].getindexmin_x() + 1;
-                ins[0].length_z = ins[0].getindexmax_z() - ins[0].getindexmin_z() + 1;
-
-
-                this->inside = ins;
-            }
-            else if(indexmin_z < Pa.PMLz && indexmax_z >= Pa.PMLz + Pa.Nz)
-            {
-                this->inside_num = 3;
-                Inside *ins = new Inside[this->inside_num];
-                ins[0].indexmin_x = this->indexmin_x;
-                ins[0].indexmax_x = this->indexmax_x;
-                ins[0].indexmin_z = this->indexmin_z;
-                ins[0].indexmax_z = Pa.PMLz - 1;
-                ins[0].length_x = ins[0].getindexmax_x() - ins[0].getindexmin_x() + 1;
-                ins[0].length_z = ins[0].getindexmax_z() - ins[0].getindexmin_z() + 1;
-
-
-                ins[1].indexmin_x = Pa.PMLx + Pa.Nx;
-                ins[1].indexmax_x = this->indexmax_x;
-                ins[1].indexmin_z = Pa.PMLz;
-                ins[1].indexmax_z = Pa.PMLz + Pa.Nz - 1;
-                ins[1].length_x = ins[1].getindexmax_x() - ins[1].getindexmin_x() + 1;
-                ins[1].length_z = ins[1].getindexmax_z() - ins[1].getindexmin_z() + 1;
-
-                ins[2].indexmin_x = this->indexmin_x;
-                ins[2].indexmax_x = this->indexmax_x;
-                ins[2].indexmin_z = Pa.PMLz + Pa.Nz;
-                ins[2].indexmax_z = this->indexmax_z;
-                ins[2].length_x = ins[2].getindexmax_x() - ins[2].getindexmin_x() + 1;
-                ins[2].length_z = ins[2].getindexmax_z() - ins[2].getindexmin_z() + 1;
-
-                this->inside = ins;
-            }
-        }
-        else if(indexmin_z < Pa.PMLz && indexmax_z >= Pa.PMLz)
-        {
-            if(indexmax_z >= Pa.PMLz + Pa.Nz)
-            {
-                if(indexmin_x >= Pa.PMLx && indexmax_x < Pa.PMLx + Pa.Nx)
-                {
-                    this->inside_num = 2;
-                    Inside *ins = new Inside[this->inside_num];
-                    ins[0].indexmin_x = this->indexmin_x;
-                    ins[0].indexmax_x = this->indexmax_x;
-                    ins[0].indexmin_z = this->indexmin_z;
-                    ins[0].indexmax_z = Pa.PMLz - 1;
-                    ins[0].length_x = ins[0].getindexmax_x() - ins[0].getindexmin_x() + 1;
-                    ins[0].length_z = ins[0].getindexmax_z() - ins[0].getindexmin_z() + 1;
-
-
-                    ins[1].indexmin_x = this->indexmin_x;
-                    ins[1].indexmax_x = this->indexmax_x;
-                    ins[1].indexmin_z = Pa.PMLz + Pa.Nz;
-                    ins[1].indexmax_z = this->indexmax_z;
-                    ins[1].length_x = ins[1].getindexmax_x() - ins[1].getindexmin_x() + 1;
-                    ins[1].length_z = ins[1].getindexmax_z() - ins[1].getindexmin_z() + 1;
-
-                    this->inside = ins;
-                }
-            }
-            else if(indexmax_z < Pa.PMLz + Pa.Nz)
-            {
-                this->inside_num = 1;
-                Inside *ins = new Inside[this->inside_num];
-                ins[0].indexmin_x = this->indexmin_x;
-                ins[0].indexmax_x = this->indexmax_x;
-                ins[0].indexmin_z = this->indexmin_z;
-                ins[0].indexmax_z = Pa.PMLz - 1;
-                ins[0].length_x = ins[0].getindexmax_x() - ins[0].getindexmin_x() + 1;
-                ins[0].length_z = ins[0].getindexmax_z() - ins[0].getindexmin_z() + 1;
-
-
-                this->inside = ins;
-            }
-        }
-        else if(indexmin_z >= Pa.PMLz && indexmax_z >= Pa.PMLz + Pa.Nz)
-        {
-            if(indexmin_x >= Pa.PMLx && indexmax_x < Pa.PMLx + Pa.Nx)
-            {
-                this->inside_num = 1;
-                Inside *ins = new Inside[this->inside_num];
-                ins[0].indexmin_x = this->indexmin_x;
-                ins[0].indexmax_x = this->indexmax_x;
-                ins[0].indexmin_z = Pa.PMLz + Pa.Nz;
-                ins[0].indexmax_z = this->indexmax_z;
-                ins[0].length_x = ins[0].getindexmax_x() - ins[0].getindexmin_x() + 1;
-                ins[0].length_z = ins[0].getindexmax_z() - ins[0].getindexmin_z() + 1;
-
-
-                this->inside = ins;
+                cout << "error" << endl;
             }
         }
         else
         {
-            this->inside_num = 0;
+            cout << "error" << endl;
         }
     }
 
     this->inside_length = 0;
+//    if(rank == 6)
+//        cout << this->inside_num << endl;
     for(uint i = 0; i < this->inside_num; ++i)
     {
         this->inside_length += this->inside[i].getlength_x() * this->inside[i].getlength_z();
@@ -731,6 +839,7 @@ void Partition::setInside(AFDPU2D Pa)
 
 void Partition::set_h_Coord(AFDPU2D Pa)
 {
+    this->h_Coord_num = 0;
     if(this->indexmax_x < Pa.PMLx && (this->indexmax_z < Pa.PMLz || this->indexmin_z >= Pa.PMLz + Pa.Nz))
     {
         this->h_Coord_num = 0;
@@ -741,7 +850,7 @@ void Partition::set_h_Coord(AFDPU2D Pa)
         this->h_Coord_num = 0;
         this->h_coord = NULL;
     }
-    else if(this->indexmax_z < Pa.PMLz - this->border_h_Coord && this->indexmax_x < Pa.PMLx - this->border_h_Coord && this->indexmin_z >= Pa.PMLz + Pa.Nz + this->border_h_Coord && this->indexmin_x >= Pa.PMLx + Pa.Nx + this->border_h_Coord)
+    else if(this->indexmax_z < Pa.PMLz - this->border_h_Coord || this->indexmax_x < Pa.PMLx - this->border_h_Coord || this->indexmin_z >= Pa.PMLz + Pa.Nz + this->border_h_Coord || this->indexmin_x >= Pa.PMLx + Pa.Nx + this->border_h_Coord)
     {
         this->h_Coord_num = 0;
         this->h_coord = NULL;
@@ -750,10 +859,25 @@ void Partition::set_h_Coord(AFDPU2D Pa)
     {
         this->h_Coord_num = 0;
         this->h_coord = NULL;
+    }
+    else if(this->indexmin_x < Pa.PMLx - this->border_h_Coord && this->indexmax_x >= Pa.PMLx - this->border_h_Coord && this->indexmax_x < Pa.PMLx)
+    {
+        this->h_Coord_num = 1;
+        H_Coord *coord = new H_Coord[this->h_Coord_num];
+        coord[0].indexmin_x = Pa.PMLx - this->border_h_Coord;
+        coord[0].indexmax_x = this->indexmax_x;
+        coord[0].indexmin_z = this->indexmin_z > Pa.PMLz ? this->indexmin_z : Pa.PMLz;
+        coord[0].indexmax_z = this->indexmax_z < Pa.PMLz + Pa.Nz - 1 ? this->indexmax_z : Pa.PMLz + Pa.Nz - 1;
+        coord[0].length_x = coord[0].indexmax_x - coord[0].indexmin_x + 1;
+        coord[0].length_z = coord[0].indexmax_z - coord[0].indexmin_z + 1;
 
+//        if(rank == 39)
+//            //cout << coord[0].indexmin_z << " " << coord[0].indexmax_z << endl;
+//            cout << this->indexmin_z << " " << this->indexmax_z << endl;
+        this->h_coord = coord;
     }
     else if(this->indexmin_x < Pa.PMLx && this->indexmax_x >= Pa.PMLx)
-    {
+    {//cout << rank << endl;
         if(this->indexmax_x < Pa.PMLx + Pa.Nx)
         {
             if(this->indexmax_z < Pa.PMLz)
@@ -871,6 +995,7 @@ void Partition::set_h_Coord(AFDPU2D Pa)
             else
             {
 
+                cout << "error" << endl;
             }
         }
         else if(this->indexmax_x >= Pa.PMLx + Pa.Nx)
@@ -1018,6 +1143,7 @@ void Partition::set_h_Coord(AFDPU2D Pa)
             else
             {
 //cout << rank << endl;
+                cout << "error" << endl;
             }
         }
     }
@@ -1105,7 +1231,7 @@ void Partition::set_h_Coord(AFDPU2D Pa)
             }
             else
             {
-
+                cout << "error" << endl;
             }
         }
         else if(this->indexmax_x >= Pa.PMLx + Pa.Nx)
@@ -1224,12 +1350,12 @@ void Partition::set_h_Coord(AFDPU2D Pa)
             }
             else
             {
-
+                cout << "error" << endl;
             }
         }
         else
         {
-
+            cout << "error" << endl;
         }
     }
     else if(this->indexmin_x >= Pa.PMLx + Pa.Nx)
@@ -1247,13 +1373,22 @@ void Partition::set_h_Coord(AFDPU2D Pa)
     }
     else
     {
-
+        //if(rank == 13)cout << rank << " " << indexmin_x << " " << indexmax_x << " " << indexmin_z << " " << indexmax_z << endl;
+        cout << "error" << endl;
     }
 
     this->h_Coord_length = 0;
+//    if(rank == 3)
+//    cout << this->h_Coord_num << endl;
+
+//    if(rank == 3)
+//        cout << this->indexmin_x << " " << this->indexmin_z << " " << this->indexmax_x << " " << this->indexmax_z << endl;
+
     for(uint i = 0; i < this->h_Coord_num; ++i)
     {
         this->h_Coord_length += this->h_coord[i].getlength_x() * this->h_coord[i].getlength_z();
+//        if(rank == 39)
+//        cout << rank << " " << this->h_coord[i].getlength_z() << endl;
     }
 }
 

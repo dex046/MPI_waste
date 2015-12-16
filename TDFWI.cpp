@@ -1421,14 +1421,24 @@ void CalTrueWF(AFDPU2D Pa,
 			plan->h_TrueWF,
 			Pa.Nt * ip->St[is].rn * sizeof(float));
 
-//        ofstream fout("sgs_t2.txt");
-//        for(int i = 255; i < 510; ++i)
-//        {
-//            for(int j = 0; j < Pa.Nt; ++j)
-//                fout << *(sgs_t + i * Pa.Nt + j) << " ";
-//            //
-//        }
-//        fout << endl;
+        ofstream fout("Rsgs_t0.txt");
+        ofstream fout1("Rsgs_t1.txt");
+//        ofstream fout2("sgs_t2.txt");
+//        ofstream fout3("sgs_t3.txt");
+        for(int i = 0; i < 255; ++i)
+        {
+            for(int j = 0; j < Pa.Nt; ++j)
+                fout << *(sgs_t + i * Pa.Nt + j) << " ";
+            //
+        }
+        fout << endl;
+        for(int i = 255; i < 510; ++i)
+        {
+            for(int j = 0; j < Pa.Nt; ++j)
+                fout1 << *(sgs_t + i * Pa.Nt + j) << " ";
+            //
+        }
+        fout1 << endl;
 	}
 }
 

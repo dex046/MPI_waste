@@ -1,0 +1,675 @@
+Z * X
+=====================================================================
+2 * 2
+        Calculating the observed data...
+        Calculating the observed data used:	26s
+
+        Doing the 0th iteration
+        Calculating the Gradient...
+        Objective function value:	59202.1
+        Step length:	152.931
+        The 0th iteration used 81s
+        Writing data to .sgy1
+
+=====================================================================
+2 * 3
+        Calculating the observed data...
+        Calculating the observed data used:	21s
+
+        Doing the 0th iteration
+        Calculating the Gradient...
+        Objective function value:	59202.1
+        Step length:	152.931
+        The 0th iteration used 63s
+        Writing data to .sgy1
+
+=====================================================================
+2 * 4
+        Calculating the observed data...
+        Calculating the observed data used:	18s
+
+        Doing the 0th iteration
+        Calculating the Gradient...
+        Objective function value:	59202.1
+        Step length:	152.931
+        The 0th iteration used 52s
+        Writing data to .sgy1
+
+=====================================================================
+2 * 5
+        Calculating the observed data...
+        Calculating the observed data used:	15s
+
+        Doing the 0th iteration
+        Calculating the Gradient...
+        Objective function value:	59202.1
+        Step length:	152.931
+        The 0th iteration used 44s
+        Writing data to .sgy1
+
+=====================================================================
+3 * 4
+        Calculating the observed data...
+        Calculating the observed data used:	13s
+
+        Doing the 0th iteration
+        Calculating the Gradient...
+        Objective function value:	59202.1
+        Step length:	152.931
+        The 0th iteration used 38s
+        Writing data to .sgy1
+
+=====================================================================
+3 * 5
+        Calculating the observed data...
+        Calculating the observed data used:	15s
+
+        Doing the 0th iteration
+        Calculating the Gradient...
+        Objective function value:	59202.1
+        Step length:	152.931
+        The 0th iteration used 44s
+        Writing data to .sgy1
+
+=====================================================================
+4 * 4
+        Calculating the observed data...
+        Calculating the observed data used:	15s
+
+        Doing the 0th iteration
+        Calculating the Gradient...
+        Objective function value:	59202.1
+        Step length:	152.931
+        The 0th iteration used 46s
+        Writing data to .sgy1
+
+=====================================================================
+3 * 6
+        Calculating the observed data...
+        Calculating the observed data used:	15s
+
+        Doing the 0th iteration
+        Calculating the Gradient...
+        Objective function value:	59202.1
+        Step length:	152.931
+        The 0th iteration used 44s
+        Writing data to .sgy1
+
+=====================================================================
+4 * 5
+        Calculating the observed data...
+        Calculating the observed data used:	13s
+
+        Doing the 0th iteration
+        Calculating the Gradient...
+        Objective function value:	59202.1
+        Step length:	152.931
+        The 0th iteration used 39s
+        Writing data to .sgy1
+
+=====================================================================
+3 * 7
+        Calculating the observed data...
+        Calculating the observed data used:	13s
+
+        Doing the 0th iteration
+        Calculating the Gradient...
+        Objective function value:	59202.1
+        Step length:	152.931
+        The 0th iteration used 40s
+        Writing data to .sgy1
+
+=====================================================================
+3 * 8
+        Calculating the observed data...
+        Calculating the observed data used:	13s
+
+        Doing the 0th iteration
+        Calculating the Gradient...
+        Objective function value:	59202.1
+        Step length:	152.931
+        The 0th iteration used 37s
+        Writing data to .sgy1
+
+=====================================================================
+4 * 6
+        Calculating the observed data...
+        Calculating the observed data used:	12s
+
+        Doing the 0th iteration
+        Calculating the Gradient...
+        Objective function value:	59202.1
+        Step length:	152.931
+        The 0th iteration used 36s
+        Writing data to .sgy1
+
+=====================================================================
+5 * 5
+        Calculating the observed data...
+        Calculating the observed data used:	7s
+
+        Doing the 0th iteration
+        Calculating the Gradient...
+        Objective function value:	59202.1
+        Step length:	152.931
+        The 0th iteration used 24s
+        Writing data to .sgy1
+
+=====================================================================
+4 * 7
+        Calculating the observed data...
+        Calculating the observed data used:	9s
+
+        Doing the 0th iteration
+        Calculating the Gradient...
+        Objective function value:	59202.1
+        Step length:	152.931
+        The 0th iteration used 27s
+        Writing data to .sgy1
+
+=====================================================================
+5 * 6
+        Calculating the observed data...
+        Calculating the observed data used:	9s
+
+        Doing the 0th iteration
+        Calculating the Gradient...
+        Objective function value:	59202.1
+        Step length:	152.931
+        The 0th iteration used 26s
+        Writing data to .sgy1
+
+=====================================================================
+4 * 8
+        Calculating the observed data...
+        Calculating the observed data used:	9s
+
+        Doing the 0th iteration
+        Calculating the Gradient...
+        Objective function value:	59202.1
+        Step length:	152.931
+        The 0th iteration used 27s
+        Writing data to .sgy1
+
+=====================================================================
+5 * 7
+        Calculating the observed data...
+        Calculating the observed data used:	9s
+
+        Doing the 0th iteration
+        Calculating the Gradient...
+        Objective function value:	59202.1
+        Step length:	152.931
+        The 0th iteration used 28s
+        Writing data to .sgy1
+
+=====================================================================
+6 * 6
+        Calculating the observed data...
+        Calculating the observed data used:	9s
+
+        Doing the 0th iteration
+        Calculating the Gradient...
+        Objective function value:	59202.1
+        Step length:	152.931
+        The 0th iteration used 26s
+        Writing data to .sgy1
+
+=====================================================================
+5 * 8
+        Calculating the observed data...
+        Calculating the observed data used:	9s
+
+        Doing the 0th iteration
+        Calculating the Gradient...
+        Objective function value:	59202.1
+        Step length:	152.931
+        The 0th iteration used 26s
+        Writing data to .sgy1
+
+=====================================================================
+6 * 7
+        Calculating the observed data...
+        Calculating the observed data used:	8s
+
+        Doing the 0th iteration
+        Calculating the Gradient...
+        Objective function value:	59202.1
+        Step length:	152.931
+        The 0th iteration used 25s
+        Writing data to .sgy1
+
+=====================================================================
+5 * 9
+        Calculating the observed data...
+        Calculating the observed data used:	8s
+
+        Doing the 0th iteration
+        Calculating the Gradient...
+        Objective function value:	59202.1
+        Step length:	152.931
+        The 0th iteration used 25s
+        Writing data to .sgy1
+
+=====================================================================
+6 * 8
+        Calculating the observed data...
+        Calculating the observed data used:	8s
+
+        Doing the 0th iteration
+        Calculating the Gradient...
+        Objective function value:	59202.1
+        Step length:	152.931
+        The 0th iteration used 23s
+        Writing data to .sgy1
+
+=====================================================================
+7 * 7
+        Calculating the observed data...
+        Calculating the observed data used:	5s
+
+        Doing the 0th iteration
+        Calculating the Gradient...
+        Objective function value:	59202.1
+        Step length:	152.931
+        The 0th iteration used 17s
+        Writing data to .sgy1
+
+=====================================================================
+5 * 10
+        Calculating the observed data...
+        Calculating the observed data used:	6s
+
+        Doing the 0th iteration
+        Calculating the Gradient...
+        Objective function value:	59202.1
+        Step length:	152.931
+        The 0th iteration used 18s
+        Writing data to .sgy1
+
+=====================================================================
+5 * 11
+        Calculating the observed data...
+        Calculating the observed data used:	6s
+
+        Doing the 0th iteration
+        Calculating the Gradient...
+        Objective function value:	59202.1
+        Step length:	152.931
+        The 0th iteration used 19s
+        Writing data to .sgy1
+
+=====================================================================
+6 * 10
+        Calculating the observed data...
+        Calculating the observed data used:	6s
+
+        Doing the 0th iteration
+        Calculating the Gradient...
+        Objective function value:	59202.1
+        Step length:	152.931
+        The 0th iteration used 19s
+        Writing data to .sgy1
+
+=====================================================================
+7 * 9
+        Calculating the observed data...
+        Calculating the observed data used:	6s
+
+        Doing the 0th iteration
+        Calculating the Gradient...
+        Objective function value:	59202.1
+        Step length:	152.931
+        The 0th iteration used 19s
+        Writing data to .sgy1
+
+=====================================================================
+8 * 8
+        Calculating the observed data...
+        Calculating the observed data used:	6s
+
+        Doing the 0th iteration
+        Calculating the Gradient...
+        Objective function value:	59202.1
+        Step length:	152.931
+        The 0th iteration used 18s
+        Writing data to .sgy1
+
+=====================================================================
+5 * 13
+        Calculating the observed data...
+        Calculating the observed data used:	6s
+
+        Doing the 0th iteration
+        Calculating the Gradient...
+        Objective function value:	59202.1
+        Step length:	152.931
+        The 0th iteration used 19s
+        Writing data to .sgy1
+
+=====================================================================
+6 * 11
+        Calculating the observed data...
+        Calculating the observed data used:	6s
+
+        Doing the 0th iteration
+        Calculating the Gradient...
+        Objective function value:	59202.1
+        Step length:	152.931
+        The 0th iteration used 19s
+        Writing data to .sgy1
+
+=====================================================================
+7 * 10
+        Calculating the observed data...
+        Calculating the observed data used:	6s
+
+        Doing the 0th iteration
+        Calculating the Gradient...
+        Objective function value:	59202.1
+        Step length:	152.931
+        The 0th iteration used 18s
+        Writing data to .sgy1
+
+=====================================================================
+8 * 9
+        Calculating the observed data...
+        Calculating the observed data used:	6s
+
+        Doing the 0th iteration
+        Calculating the Gradient...
+        Objective function value:	59202.1
+        Step length:	152.931
+        The 0th iteration used 18s
+        Writing data to .sgy1
+
+=====================================================================
+7 * 11
+        Calculating the observed data...
+        Calculating the observed data used:	5s
+
+        Doing the 0th iteration
+        Calculating the Gradient...
+        Objective function value:	59202.1
+        Step length:	152.931
+        The 0th iteration used 14s
+        Writing data to .sgy1
+
+=====================================================================
+8 * 10
+        Calculating the observed data...
+        Calculating the observed data used:	5s
+
+        Doing the 0th iteration
+        Calculating the Gradient...
+        Objective function value:	59202.1
+        Step length:	152.931
+        The 0th iteration used 14s
+        Writing data to .sgy1
+
+=====================================================================
+9 * 9
+        Calculating the observed data...
+        Calculating the observed data used:	5s
+
+        Doing the 0th iteration
+        Calculating the Gradient...
+        Objective function value:	59202.1
+        Step length:	152.931
+        The 0th iteration used 15s
+        Writing data to .sgy1
+
+=====================================================================
+8 * 11
+        Calculating the observed data...
+        Calculating the observed data used:	5s
+
+        Doing the 0th iteration
+        Calculating the Gradient...
+        Objective function value:	59202.1
+        Step length:	152.931
+        The 0th iteration used 15s
+        Writing data to .sgy1
+
+=====================================================================
+9 * 10
+        Calculating the observed data...
+        Calculating the observed data used:	5s
+
+        Doing the 0th iteration
+        Calculating the Gradient...
+        Objective function value:	59202.1
+        Step length:	152.931
+        The 0th iteration used 15s
+        Writing data to .sgy1
+
+=====================================================================
+10 * 10
+        Calculating the observed data...
+        Calculating the observed data used:	4s
+
+        Doing the 0th iteration
+        Calculating the Gradient...
+        Objective function value:	59202.1
+        Step length:	152.931
+        The 0th iteration used 12s
+        Writing data to .sgy1
+
+=====================================================================
+10 * 11
+        Calculating the observed data...
+        Calculating the observed data used:	4s
+
+        Doing the 0th iteration
+        Calculating the Gradient...
+        Objective function value:	59202.1
+        Step length:	152.931
+        The 0th iteration used 13s
+        Writing data to .sgy1
+
+=====================================================================
+10 * 12
+        Calculating the observed data...
+        Calculating the observed data used:	4s
+
+        Doing the 0th iteration
+        Calculating the Gradient...
+        Objective function value:	59202.1
+        Step length:	152.931
+        The 0th iteration used 12s
+        Writing data to .sgy1
+
+=====================================================================
+11 * 11
+        Calculating the observed data...
+        Calculating the observed data used:	4s
+
+        Doing the 0th iteration
+        Calculating the Gradient...
+        Objective function value:	59202.1
+        Step length:	152.931
+        The 0th iteration used 11s
+        Writing data to .sgy1
+
+=====================================================================
+10 * 13
+        Calculating the observed data...
+        Calculating the observed data used:	4s
+
+        Doing the 0th iteration
+        Calculating the Gradient...
+        Objective function value:	59202.1
+        Step length:	152.931
+        The 0th iteration used 11s
+        Writing data to .sgy1
+
+=====================================================================
+10 * 14
+        Calculating the observed data...
+        Calculating the observed data used:	4s
+
+        Doing the 0th iteration
+        Calculating the Gradient...
+        Objective function value:	59202.1
+        Step length:	152.931
+        The 0th iteration used 11s
+        Writing data to .sgy1
+
+=====================================================================
+12 * 12
+        Calculating the observed data...
+        Calculating the observed data used:	4s
+
+        Doing the 0th iteration
+        Calculating the Gradient...
+        Objective function value:	59202.1
+        Step length:	152.931
+        The 0th iteration used 11s
+        Writing data to .sgy1
+
+=====================================================================
+10 * 15
+        Calculating the observed data...
+        Calculating the observed data used:	4s
+
+        Doing the 0th iteration
+        Calculating the Gradient...
+        Objective function value:	59202.1
+        Step length:	152.931
+        The 0th iteration used 10s
+        Writing data to .sgy1
+
+=====================================================================
+10 * 16
+        Calculating the observed data...
+        Calculating the observed data used:	4s
+
+        Doing the 0th iteration
+        Calculating the Gradient...
+        Objective function value:	59202.1
+        Step length:	152.931
+        The 0th iteration used 11s
+        Writing data to .sgy1
+
+=====================================================================
+13 * 13
+        Calculating the observed data...
+        Calculating the observed data used:	3s
+
+        Doing the 0th iteration
+        Calculating the Gradient...
+        Objective function value:	59202.1
+        Step length:	152.931
+        The 0th iteration used 9s
+        Writing data to .sgy1
+
+=====================================================================
+10 * 18
+        Calculating the observed data...
+        Calculating the observed data used:	4s
+
+        Doing the 0th iteration
+        Calculating the Gradient...
+        Objective function value:	59202.1
+        Step length:	152.931
+        The 0th iteration used 10s
+        Writing data to .sgy1
+
+=====================================================================
+14 * 14
+        Calculating the observed data...
+        Calculating the observed data used:	3s
+
+        Doing the 0th iteration
+        Calculating the Gradient...
+        Objective function value:	59202.1
+        Step length:	152.931
+        The 0th iteration used 9s
+        Writing data to .sgy1
+
+=====================================================================
+10 * 20
+        Calculating the observed data...
+        Calculating the observed data used:	3s
+
+        Doing the 0th iteration
+        Calculating the Gradient...
+        Objective function value:	59202.1
+        Step length:	152.931
+        The 0th iteration used 9s
+        Writing data to .sgy1
+
+=====================================================================
+15 * 15
+        Calculating the observed data...
+        Calculating the observed data used:	3s
+
+        Doing the 0th iteration
+        Calculating the Gradient...
+        Objective function value:	59202.1
+        Step length:	152.931
+        The 0th iteration used 9s
+        Writing data to .sgy1
+
+=====================================================================
+16 * 16
+        Calculating the observed data...
+        Calculating the observed data used:	3s
+
+        Doing the 0th iteration
+        Calculating the Gradient...
+        Objective function value:	59202.1
+        Step length:	152.931
+        The 0th iteration used 13s
+        Writing data to .sgy1
+
+=====================================================================
+17 * 17
+        Calculating the observed data...
+        Calculating the observed data used:	3s
+
+        Doing the 0th iteration
+        Calculating the Gradient...
+        Objective function value:	59202.1
+        Step length:	152.931
+        The 0th iteration used 15s
+        Writing data to .sgy1
+
+=====================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

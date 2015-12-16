@@ -74,7 +74,7 @@ void ReadData(char FileName[],
     memset((void *)DFormat, 0, sizeof(short));
     Reel = new REEL[1];
     memset((void *)Reel, 0, sizeof(REEL));
-
+//cout << "ww" << endl;
     f1 = fopen(FileName, "rb");
     if (f1 == NULL)
     {
@@ -114,6 +114,7 @@ void ReadData(char FileName[],
     // read the data
     ReadSgyData(FileName, trace, *Reel, SampleNum,
         DFormat, &BReel, &BIBM, pt);
+
     // write the trace data to Data
     for(n = 0; n < length_x; ++n)
     {
@@ -294,8 +295,8 @@ void WriteData(const char * const FileName,
         block_x = pt.getinteriorLength_x();
         block_z = pt.getinteriorLength_z();
 
-        if(!block_x || !block_z)
-            return;
+//        if(!block_x || !block_z)
+//            return;
     }
     else if(tag == WRITE_ALL)
     {
@@ -355,6 +356,7 @@ void WriteData(const char * const FileName,
         delete []trace[n].data;
     }
     delete []trace;
+
 }
 
 
@@ -431,7 +433,7 @@ void MallocVariables(AFDPU2D Pa,
         }
 
 
-        if(interiorlength_x || interiorlength_z)
+        if(interiorlength_x && interiorlength_z)
         {
             plan->h_Grad = new float[interiorlength_z * interiorlength_x];//Pa.Nz * Pa.Nx
             plan->h_U_Der = new float[interiorlength_z * interiorlength_x];//Pa.Nz * Pa.Nx
@@ -439,16 +441,14 @@ void MallocVariables(AFDPU2D Pa,
 
 
         if(sum_h_Coord)
-        {
+        {//if(pt.getrank() == 39)cout << pt.getrank() << " " << sum_h_Coord << endl;
             plan->h_Coord = new uint[sum_h_Coord];
             plan->h_RU = new float[sum_h_Coord * (Pa.Nt - 1)];
         }
-
-
     }
     catch(const std::bad_alloc& e)
     {
-        cout << "Allocation failed: www   " << e.what() << endl;
+        cout << "Allocation failed: www   " << pt.getrank() << endl;
     }
 
     // 初始化空间
@@ -477,7 +477,6 @@ void MallocVariables(AFDPU2D Pa,
     memset((void *)plan->h_W_r,			0,	sizeof(float) * h_VW.length_z * h_VW.length_x);
     memset((void *)plan->h_Vp,			0,	sizeof(float) * h_Vp.length_z * h_Vp.length_x);
 
-
     if(RL_num)
     {
         memset((void *)plan->h_TrueWF,		0,	sizeof(float) * RL_num * Pa.Nt);
@@ -490,19 +489,23 @@ void MallocVariables(AFDPU2D Pa,
         memset((void *)plan->h_SumResCurr,	0,	sizeof(float) * RL_num * Pa.Nt);
     }
 
-    if(interiorlength_x || interiorlength_z)
+    if(interiorlength_x && interiorlength_z)
     {
         memset((void *)plan->h_Grad,		0,	sizeof(float) * interiorlength_z * interiorlength_x);
         memset((void *)plan->h_U_Der,		0,	sizeof(float) * interiorlength_z * interiorlength_x);
     }
 
 
+
     if(sum_h_Coord)
     {
+        //cout << "AAAAA" << pt.getrank() << " " << sum_h_Coord << "AAAAA" << endl;
         memset((void *)plan->h_Coord,		0,	sizeof(uint) * sum_h_Coord);
 
         memset((void *)plan->h_RU,			0,	sizeof(float) * sum_h_Coord * (Pa.Nt - 1));
     }
+
+        //cout << pt.getrank() << endl;
 }
 
 
@@ -1669,36 +1672,36 @@ void UpdateVpPML(AFDPU2D Pa,
             // 纵向
             if (temp_z < Pa.PMLz)
             {
-                if(max_z >= Pa.PMLz)
+                if(!temph_Vp.bottomborder)
                     h_Vp[id] = h_Vp[(Pa.PMLz - min_z + temph_Vp.topborder) * temph_Vp.length_x + temph_Vp.leftborder + ix];
                 else
                 {
-                    h_Vp[id] = h_Vp[(temph_Vp.length_z - temph_Vp.bottomborder) * temph_Vp.length_x + ix + temph_Vp.leftborder];///tong yi ge fang xiang shang zhi neng youyige border
+                    h_Vp[id] = h_Vp[(block_z + temph_Vp.topborder) * temph_Vp.length_x + ix + temph_Vp.leftborder];///tong yi ge fang xiang shang zhi neng youyige border
                 }
             }
             if (temp_z > Pa.Nz + Pa.PMLz - 1)
             {
-                if(min_z <= Pa.Nz + Pa.PMLz - 1)
+                if(!temph_Vp.topborder)
                     h_Vp[id] = h_Vp[(Pa.Nz + Pa.PMLz - min_z - 1 + temph_Vp.topborder) * temph_Vp.length_x + ix + temph_Vp.leftborder];
                 else
                 {
-                    h_Vp[id] = h_Vp[(temph_Vp.length_z - temph_Vp.topborder) * temph_Vp.length_x + ix + temph_Vp.leftborder];
+                    h_Vp[id] = h_Vp[ix + temph_Vp.leftborder];
                 }
             }
             // 横向
             if (temp_x < Pa.PMLx)
             {
-                if(max_x >= Pa.PMLx)
+                if(!temph_Vp.rightborder)
                     h_Vp[id] = h_Vp[temph_Vp.length_x * (iz + temph_Vp.topborder) + Pa.PMLx - min_x + temph_Vp.leftborder];
                 else
-                    h_Vp[id] = h_Vp[temph_Vp.length_x * (iz + 1 + temph_Vp.topborder) - temph_Vp.rightborder];////?
+                    h_Vp[id] = h_Vp[temph_Vp.length_x * (iz + temph_Vp.topborder) + temph_Vp.leftborder + block_x];////?
             }
             if (temp_x > Pa.Nx + Pa.PMLx - 1)
             {
-                if(min_x <= Pa.Nx + Pa.PMLx - 1)
-                    h_Vp[id] = h_Vp[iz * temph_Vp.length_x + Pa.Nx + Pa.PMLx - 1 - min_x];
+                if(!temph_Vp.leftborder)
+                    h_Vp[id] = h_Vp[(iz + temph_Vp.topborder) * temph_Vp.length_x + Pa.Nx + Pa.PMLx - 1 - min_x + temph_Vp.leftborder];
                 else
-                    h_Vp[id] = h_Vp[temph_Vp.length_x * (iz + 1) - temph_Vp.leftborder];
+                    h_Vp[id] = h_Vp[temph_Vp.length_x * (iz + temph_Vp.topborder)];
             }
         }
     }
@@ -2113,17 +2116,47 @@ void CalTrueWF(AFDPU2D Pa,
         }
 
 //        ofstream fout("sgs_t2.txt");
-//        if(pt.getrank() == 1)
-//        for(int i = 0; i < RL_num; ++i)
+//        ofstream fout("sgs_t3.txt");
+//        if(pt.getrank() == 0)
 //        {
-//            for(int j = 0; j < Pa.Nt; ++j)
-//                fout << *(sgs_t + i * Pa.Nt + j) << " ";
-//            //
+//            ofstream fout("sgs_t0.txt");
+//            for(int i = 0; i < RL_num; ++i)
+//            {
+//                for(int j = 0; j < Pa.Nt; ++j)
+//                    fout << *(sgs_t + i * Pa.Nt + j) << " ";
+//                //
+//            }
+//            fout << endl;
 //        }
-//        fout << endl;
+//        if(pt.getrank() == 1)
+//        {
+//            ofstream fout("sgs_t1.txt");
+//            for(int i = 0; i < RL_num; ++i)
+//            {
+//                for(int j = 0; j < Pa.Nt; ++j)
+//                    fout << *(sgs_t + i * Pa.Nt + j) << " ";
+//            }
+//            fout << endl;
+//        }
+//        if(pt.getrank() == 2)
+//        {
+//            for(int i = 0; i < RL_num; ++i)
+//            {
+//                for(int j = 0; j < Pa.Nt; ++j)
+//                    fout << *(sgs_t + i * Pa.Nt + j) << " ";
+//            }
+//            fout << endl;
+//        }
+//        if(pt.getrank() == 3)
+//        {
+//            for(int i = 0; i < RL_num; ++i)
+//            {
+//                for(int j = 0; j < Pa.Nt; ++j)
+//                    fout << *(sgs_t + i * Pa.Nt + j) << " ";
+//            }
+//            fout << endl;
+//        }
     }
-
-
 }
 
 /*------------------------------------------------------------------------
@@ -2169,7 +2202,7 @@ void CalGrad(AFDPU2D Pa,
 
     uint RecNum = pt.geth_Coord_length();
 
-    if(interiorLength_z || interiorLength_x)
+    if(interiorLength_z && interiorLength_x)
     {
         // 梯度变量空间清零
         memset((void *)plan->h_Grad, 0, sizeof(float) * interiorLength_z * interiorLength_x);
@@ -2220,10 +2253,10 @@ void CalGrad(AFDPU2D Pa,
         }
 
 
-        if(interiorLength_x || interiorLength_z)
+        if(interiorLength_x && interiorLength_z)
             memset((void *)plan->h_U_Der,		0,	sizeof(float) * interiorLength_z * interiorLength_x);
 
-        MPI_Request request_send_U, request_send_V, request_send_W, request_send, request_recv_OBJ;
+        MPI_Request request_send_U, request_send_V, request_send_W, request_send, request_recv_OBJ, request_recv, request_recv_min_RL, request_recv_max_RL;
         MPI_Status status_send, status_recv;
 
         // 计算正演波场，对时间进行循环
@@ -2299,6 +2332,7 @@ void CalGrad(AFDPU2D Pa,
                 Pa.Nt * RL_num * sizeof(float));
         }
 
+
 //        ofstream fout("h_CurrWF.txt");
 //        if(rank == 0)
 //        for(uint i = 0; i < RL_num; ++i)
@@ -2323,7 +2357,7 @@ void CalGrad(AFDPU2D Pa,
                     AddSource(Pa, plan->h_U_next, -1.0f * Wavelet, plan->h_Vp, pt);
                 }
 
-                if(interiorLength_x || interiorLength_z)
+                if(interiorLength_x && interiorLength_z)
                 {
                     // 求取波场对时间的2阶导数
                     StepCal2Der(Pa, plan->h_U_past, plan->h_U_now,
@@ -2376,7 +2410,7 @@ void CalGrad(AFDPU2D Pa,
                     plan->h_V, plan->h_W,plan->h_PHIx_V_x, plan->h_PHIz_W_z,
                     plan->h_Vp, pt);
 
-                if(interiorLength_x || interiorLength_z)
+                if(interiorLength_x && interiorLength_z)
                 {
                     // 求取波场对时间的2阶导数
                     StepCal2Der(Pa, plan->h_U_past, plan->h_U_now,
@@ -2404,7 +2438,7 @@ void CalGrad(AFDPU2D Pa,
             MPI_Barrier(MPI_COMM_WORLD);
             //dataGather(plan->h_U_now, pt, STEP_U);//recv data
 
-            if(interiorLength_x || interiorLength_z)
+            if(interiorLength_x && interiorLength_z)
             {
                 // 一步求取梯度
                 StepCalGrad(Pa, plan->h_Grad, plan->h_U_Der, plan->h_U_now_r, pt);//plan->h_Grad
@@ -2418,7 +2452,6 @@ void CalGrad(AFDPU2D Pa,
             // 一步更新波场V和W
             StepVW(Pa, plan->h_U_now_r, plan->h_V_r, plan->h_W_r,
                 plan->h_PHIx_U_x_r, plan->h_PHIz_U_z_r, plan->h_Bx, plan->h_Bz, pt, it);
-
 
             dataTransport(plan->h_V_r, pt, STEP_V, it);//send data
             dataTransport(plan->h_W_r, pt, STEP_W, it);//send data
@@ -2441,34 +2474,95 @@ void CalGrad(AFDPU2D Pa,
             }
         }
 
+        MPI_Barrier(MPI_COMM_WORLD);
+        //cout << "ppppppp" << pt.getrank() << endl;
+
         //for(uint i = 0; i < RL)
 
+        uint indexmin_x = pt.getindexmin_x();
+        uint indexmax_x = pt.getindexmax_x();
+
+        int max_rank_RL = 0, min_rank_RL = 0;
+
+        if(RL_num && indexmin_x <= Pa.PMLx && indexmax_x >= Pa.PMLx)
+        {//cout << rank << endl;
+            min_rank_RL = rank;
+            MPI_Isend(&min_rank_RL, 1, MPI_INT, ROOT_ID, STEP_MIN_RL, MPI_COMM_WORLD, &request_send);
+            //cout << "AAAA" << min_rank_RL << " " << max_rank_RL << "AAAA" << endl;
+        }
+        if(RL_num && indexmin_x <= Pa.PMLx + ip->St[0].rn - 1 && indexmax_x >= Pa.PMLx + ip->St[0].rn - 1)
+        {
+            max_rank_RL = rank;
+            MPI_Isend(&max_rank_RL, 1, MPI_INT, ROOT_ID, STEP_MAX_RL, MPI_COMM_WORLD, &request_send);
+        }
+
+        if(rank == ROOT_ID)
+        {
+            MPI_Irecv(&max_rank_RL, 1, MPI_INT, MPI_ANY_SOURCE, STEP_MAX_RL, MPI_COMM_WORLD, &request_recv_max_RL);
+            MPI_Irecv(&min_rank_RL, 1, MPI_INT, MPI_ANY_SOURCE, STEP_MIN_RL, MPI_COMM_WORLD, &request_recv_min_RL);
+            MPI_Wait(&request_recv_max_RL, &status_recv);
+            MPI_Wait(&request_recv_min_RL, &status_recv);
+        }
+        MPI_Barrier(MPI_COMM_WORLD);
+        MPI_Bcast(&max_rank_RL, 1, MPI_INT, ROOT_ID, MPI_COMM_WORLD);
+        MPI_Bcast(&min_rank_RL, 1, MPI_INT, ROOT_ID, MPI_COMM_WORLD);
+
+//cout << max_rank_RL << endl;
+        float *buf_obj = new float[1];
         // 求取目标函数
         if(RL_num)
-            for (uint m = 0; m < RL_num * Pa.Nt; m++)
-            {
-                //cout << *ip->ObjIter << endl;
-                ip->ObjIter[It] += 0.5f * powf(plan->h_ResWF[m], 2.0f);//ci shi It = 0// zhe li suan de zhi shi jubu de han shu
-            }
-//cout << *ip->ObjIter << endl;
-        float *buf_obj = new float[1];
-        if(rank != ROOT_ID)
         {
-            MPI_Isend(&ip->ObjIter[It], 1, MPI_FLOAT, ROOT_ID, STEP_OBJ, MPI_COMM_WORLD, &request_send);
-        }
-        else
-        {
-            for(uint i = 0; i < rank_size - 1; ++i)
+            if(rank != min_rank_RL)
             {
-                MPI_Irecv(buf_obj, 1, MPI_FLOAT, MPI_ANY_SOURCE, STEP_OBJ, MPI_COMM_WORLD, &request_recv_OBJ);
+                MPI_Irecv(buf_obj, 1, MPI_FLOAT, rank - 1, STEP_OBJ, MPI_COMM_WORLD, &request_recv_OBJ);
                 MPI_Wait(&request_recv_OBJ, &status_recv);
-                //cout << *buf_obj << endl;
-                ip->ObjIter[It] += *buf_obj;
+                ip->ObjIter[It] = *buf_obj;
+                for (uint m = 0; m < RL_num * Pa.Nt; m++)
+                {
+                    //cout << *ip->ObjIter << endl;
+                    ip->ObjIter[It] += 0.5f * powf(plan->h_ResWF[m], 2.0f);//ci shi It = 0// zhe li suan de zhi shi jubu de han shu
+                }
+                if(rank != max_rank_RL)
+                {
+                    MPI_Isend(&ip->ObjIter[It], 1, MPI_FLOAT, rank + 1, STEP_OBJ, MPI_COMM_WORLD, &request_send);
+                }
+            }
+            else
+            {
+                for (uint m = 0; m < RL_num * Pa.Nt; m++)
+                {
+                    //cout << *ip->ObjIter << endl;
+                    ip->ObjIter[It] += 0.5f * powf(plan->h_ResWF[m], 2.0f);//ci shi It = 0// zhe li suan de zhi shi jubu de han shu
+                }
+                MPI_Isend(&ip->ObjIter[It], 1, MPI_FLOAT, rank + 1, STEP_OBJ, MPI_COMM_WORLD, &request_send);
             }
         }
 
+//        if(rank >= min_rank_RL && rank <= max_rank_RL)
+//cout << *ip->ObjIter << " " << rank << endl;
+
+//        if(rank != ROOT_ID)
+//        {
+//            MPI_Isend(&ip->ObjIter[It], 1, MPI_FLOAT, ROOT_ID, STEP_OBJ, MPI_COMM_WORLD, &request_send);
+//        }
+//        else
+//        {
+//            for(uint i = 0; i < rank_size - 1; ++i)
+//            {
+//                MPI_Irecv(buf_obj, 1, MPI_FLOAT, MPI_ANY_SOURCE, STEP_OBJ, MPI_COMM_WORLD, &request_recv_OBJ);
+//                MPI_Wait(&request_recv_OBJ, &status_recv);
+//                //cout << *buf_obj << endl;
+//                ip->ObjIter[It] += *buf_obj;
+//            }
+//        }
+
         MPI_Barrier(MPI_COMM_WORLD);
-        MPI_Bcast(&ip->ObjIter, 1, MPI_FLOAT, ROOT_ID, MPI_COMM_WORLD);
+//        if(rank == max_rank_RL)
+//        {
+//            cout << ip->ObjIter[It] << " "  << rank << endl;
+//        }
+        MPI_Bcast(&ip->ObjIter[It], 1, MPI_FLOAT, max_rank_RL, MPI_COMM_WORLD);
+        //cout << "ppppppp" << pt.getrank() << endl;
     }
 
 //    ofstream fout("GradVp0.txt");
@@ -2520,6 +2614,9 @@ void CalStepLength(AFDPU2D Pa,
     uint interior_min_x = pt.getinteriormin_x();
     uint interior_min_z = pt.getinteriormin_z();
 
+    uint indexmin_x = pt.getindexmin_x();
+    uint indexmax_x = pt.getindexmax_x();
+
     H_Border temph_Vp = pt.geth_Vp();
     H_Border temph_U = pt.geth_U();
     H_Border h_VW = pt.geth_VW();
@@ -2543,10 +2640,14 @@ void CalStepLength(AFDPU2D Pa,
     float Wavelet = 0.0f;
     float fenmu = 0.0f, fenzi = 0.0f;
     float *max_buf = new float[rank_size];
+    float MaxValue = 0;
 
-    // 归一化梯度
-    float MaxValue = MatMax(ip->GradVp, interiorLength_z * interiorLength_x);
-    //cout << MaxValue << endl;
+    if(interiorLength_z && interiorLength_x)
+    {
+        // 归一化梯度
+        MaxValue = MatMax(ip->GradVp, interiorLength_z * interiorLength_x);
+        //cout << MaxValue << endl;
+    }
 
     if(rank != ROOT_ID)
     {
@@ -2559,14 +2660,15 @@ void CalStepLength(AFDPU2D Pa,
         {
             MPI_Irecv(max_buf + i, 1, MPI_FLOAT, MPI_ANY_SOURCE, STEP_MAX, MPI_COMM_WORLD, &request_recv_MAX);
             MPI_Wait(&request_recv_MAX, &status_recv);
-            MaxValue = MatMax(max_buf, rank_size);
         }
+        MaxValue = MatMax(max_buf, rank_size);
     }
 
     MPI_Barrier(MPI_COMM_WORLD);
     MPI_Bcast(&MaxValue, 1, MPI_FLOAT, ROOT_ID, MPI_COMM_WORLD);
 
-    //cout << MaxValue << endl;
+//    if(rank == ROOT_ID)
+//    cout << MaxValue << endl;
     if (MaxValue > 1.0e-10f)
     {
         for (uint m = 0; m < interiorLength_z * interiorLength_x; m++)
@@ -2595,8 +2697,57 @@ void CalStepLength(AFDPU2D Pa,
     }
 
     UpdateVp(Pa, plan->h_Vp, plan->h_Grad, e, pt);
-    UpdateVpPML(Pa, plan->h_Vp, plan->h_Grad, e, pt);
 
+    vector<uint> trans_h_Vp = pt.gettrans_h_Vp();
+    auto begin = trans_h_Vp.begin();
+    //cout << "pppppppp" << rank << endl;
+//    if(rank == 15)
+//    {
+//        cout << *(begin + TOP) << endl;
+//        cout << *(begin + LEFT) << endl;
+//        cout << *(begin + BOTTOM) << endl;
+//        cout << *(begin + RIGHT) << endl;
+//    }
+    if(*(begin + TOP))
+    {
+        dataTransport_Vp(plan->h_Vp, pt, BOTTOM_TO_TOP, Pa);
+    }
+    if(*(begin + LEFT))
+    {
+        dataTransport_Vp(plan->h_Vp, pt, RIGHT_TO_LEFT, Pa);
+    }
+    if(*(begin + BOTTOM))
+    {
+        dataTransport_Vp(plan->h_Vp, pt, TOP_TO_BOTTOM, Pa);
+    }
+    if(*(begin + RIGHT))
+    {
+        dataTransport_Vp(plan->h_Vp, pt, LEFT_TO_RIGHT, Pa);
+    }
+
+    //cout << rank << endl;
+
+    dataGather(plan->h_Vp, pt, STEP_VP);
+
+//    if(temph_Vp.topborder)
+//    {
+//        dataGather(plan->h_Vp, pt, STEP_VP);
+//    }
+//    if(temph_Vp.leftborder)
+//    {
+//        dataGather(plan->h_Vp, pt, STEP_VP);
+//    }
+//    if(temph_Vp.bottomborder)
+//    {
+//        dataGather(plan->h_Vp, pt, STEP_VP);
+//    }
+//    if(temph_Vp.rightborder)
+//    {
+//        dataGather(plan->h_Vp, pt, STEP_VP);
+//    }
+//cout << "PPPPPPP" << rank << endl;
+    UpdateVpPML(Pa, plan->h_Vp, plan->h_Grad, e, pt);
+//cout << "qqqqqqqqq" << rank << endl;
     // 对炮进行循环
     for (uint is = 0; is < ip->ShotN; is = is + 2)
     {
@@ -2719,8 +2870,7 @@ void CalStepLength(AFDPU2D Pa,
         }
     }
 
-    int *ranks = new int[pt.getsumBlock_x()];
-    int cpu_index_z = (Pa.PMLz + 2) / pt.getblockLength_z();
+
 
 
 //    ofstream fout("h_TrailWF.txt");
@@ -2766,38 +2916,108 @@ void CalStepLength(AFDPU2D Pa,
 //        }
 //    }
 
-    // 求取最终的步长
-    for (uint m = 0; m < Pa.Nt * RL_num; m++)
-    {
-        fenzi += plan->h_SumResCurr[m] * plan->h_SumResTrial[m];
-        fenmu += plan->h_SumResTrial[m] * plan->h_SumResTrial[m];
-    }
 
-    float buf[2] = {fenzi, fenmu};
-    uint cpu_rank = cpu_index_z * sumblock_x;
-
-    MPI_Request request, request_recv_fen;
+    int *ranks = new int[pt.getsumBlock_x()];
+    int cpu_index_z = (Pa.PMLz + 2) / pt.getblockLength_z();
+    int max_rank_RL = 0, min_rank_RL = 0;
+    float buf[2];// = {fenzi, fenmu};
+    MPI_Request request, request_recv_fen, request_recv_max_RL, request_recv_min_RL;
     MPI_Status status;
-    if(rank > cpu_rank && rank < cpu_rank + sumblock_x)
-        MPI_Isend(buf, 2, MPI_FLOAT, cpu_rank, STEP_FEN, MPI_COMM_WORLD, &request);
+    // 求取最终的步长
 
-    if(rank == cpu_rank)
-    {//cout << "wwwww" << endl;
-        for(int i = 0; i < sumblock_x - 1; ++i)
-        {
-            MPI_Irecv(buf, 2, MPI_FLOAT, MPI_ANY_SOURCE, STEP_FEN, MPI_COMM_WORLD, &request_recv_fen);
-            MPI_Wait(&request_recv_fen, &status);
-            fenzi += buf[0];
-            fenmu += buf[1];
-            //cout << "fenzi = " << fenzi << "fenmu" << fenmu << endl;
-        }
-        ip->Alpha = (fenzi / fenmu) * e;
+
+
+
+    //cout << "oooo" << rank << endl;
+    if(RL_num && indexmin_x <= Pa.PMLx && indexmax_x >= Pa.PMLx)
+    {
+        min_rank_RL = rank;
+        MPI_Isend(&min_rank_RL, 1, MPI_INT, ROOT_ID, STEP_MIN_RL, MPI_COMM_WORLD, &request_send);
     }
+    if(RL_num && indexmin_x <= Pa.PMLx + ip->St[0].rn - 1 && indexmax_x >= Pa.PMLx + ip->St[0].rn - 1)
+    {
+        max_rank_RL = rank;
+        MPI_Isend(&max_rank_RL, 1, MPI_INT, ROOT_ID, STEP_MAX_RL, MPI_COMM_WORLD, &request_send);
+    }
+
+    if(rank == ROOT_ID)
+    {
+        MPI_Irecv(&max_rank_RL, 1, MPI_INT, MPI_ANY_SOURCE, STEP_MAX_RL, MPI_COMM_WORLD, &request_recv_max_RL);
+        MPI_Irecv(&min_rank_RL, 1, MPI_INT, MPI_ANY_SOURCE, STEP_MIN_RL, MPI_COMM_WORLD, &request_recv_min_RL);
+        MPI_Wait(&request_recv_max_RL, &status_recv);
+        MPI_Wait(&request_recv_min_RL, &status_recv);
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Bcast(&max_rank_RL, 1, MPI_INT, ROOT_ID, MPI_COMM_WORLD);
+    MPI_Bcast(&min_rank_RL, 1, MPI_INT, ROOT_ID, MPI_COMM_WORLD);
+
+//    if(rank == ROOT_ID)
+//        cout << max_rank_RL << " " << min_rank_RL << endl;
+
+    if(RL_num)
+    {
+        if(rank != min_rank_RL)
+        {
+            MPI_Irecv(buf, 2, MPI_FLOAT, rank - 1, STEP_FEN, MPI_COMM_WORLD, &request_recv_fen);
+            MPI_Wait(&request_recv_fen, &status);
+            fenzi = buf[0];
+            fenmu = buf[1];
+            for (uint m = 0; m < Pa.Nt * RL_num; m++)
+            {
+                fenzi += plan->h_SumResCurr[m] * plan->h_SumResTrial[m];
+                fenmu += plan->h_SumResTrial[m] * plan->h_SumResTrial[m];
+            }
+            buf[0] = fenzi;
+            buf[1] = fenmu;
+
+            if(rank != max_rank_RL)
+            {
+                MPI_Isend(buf, 2, MPI_FLOAT, rank + 1, STEP_FEN, MPI_COMM_WORLD, &request_send);
+            }
+            else
+            {
+                ip->Alpha = (fenzi / fenmu) * e;
+            }
+        }
+        else
+        {
+            for (uint m = 0; m < Pa.Nt * RL_num; m++)
+            {
+                fenzi += plan->h_SumResCurr[m] * plan->h_SumResTrial[m];
+                fenmu += plan->h_SumResTrial[m] * plan->h_SumResTrial[m];
+            }
+            buf[0] = fenzi;
+            buf[1] = fenmu;
+            MPI_Isend(buf, 2, MPI_FLOAT, rank + 1, STEP_FEN, MPI_COMM_WORLD, &request_send);
+        }
+    }
+
+
+
+//    uint cpu_rank = cpu_index_z * sumblock_x;
+
+//    MPI_Request request, request_recv_fen;
+//    MPI_Status status;
+//    if(rank > cpu_rank && rank < cpu_rank + sumblock_x)
+//        MPI_Isend(buf, 2, MPI_FLOAT, cpu_rank, STEP_FEN, MPI_COMM_WORLD, &request);
+
+//    if(rank == cpu_rank)
+//    {//cout << "wwwww" << endl;
+//        for(int i = 0; i < sumblock_x - 1; ++i)
+//        {
+//            MPI_Irecv(buf, 2, MPI_FLOAT, MPI_ANY_SOURCE, STEP_FEN, MPI_COMM_WORLD, &request_recv_fen);
+//            MPI_Wait(&request_recv_fen, &status);
+//            fenzi += buf[0];
+//            fenmu += buf[1];
+//            //cout << "fenzi = " << fenzi << "fenmu" << fenmu << endl;
+//        }
+//        ip->Alpha = (fenzi / fenmu) * e;
+//    }
 
     //cout << ip->Alpha << endl;
 
     MPI_Barrier(MPI_COMM_WORLD);
-    MPI_Bcast(&ip->Alpha, 1, MPI_FLOAT, cpu_rank, MPI_COMM_WORLD);
+    MPI_Bcast(&ip->Alpha, 1, MPI_FLOAT, max_rank_RL, MPI_COMM_WORLD);
 
 
 //    delete &buf;
@@ -2838,59 +3058,64 @@ void PreProcess(AFDPU2D Pa,
 
     for(uint i = 0; i < interiorLength_z; ++i)
     {
-        memcpy(plan->h_Grad + i * interiorLength_x, ip->GradVp + i * interiorLength_x, interiorLength_z * interiorLength_x * sizeof(float));
+        memcpy(plan->h_Grad + i * interiorLength_x, ip->GradVp + i * interiorLength_x, interiorLength_x * sizeof(float));
     }
     for(uint i = 0; i < block_z; ++i)
     {
-        memcpy(plan->h_Vp + (i + temph_Vp.topborder) * temph_Vp.length_x + temph_Vp.leftborder, ip->CurrVp + i * block_x, sizeof(float) * block_x);
+        memcpy(plan->h_Vp + (i + temph_Vp.topborder) * temph_Vp.length_x + temph_Vp.leftborder, ip->CurrVp + i * block_x, block_x * sizeof(float));
     }
-cout << pt.getrank() << endl;
+//cout << pt.getrank() << endl;
     // 更新速度
     UpdateVp(Pa, plan->h_Vp, plan->h_Grad, ip->Alpha, pt);
-cout << "oooooo" << pt.getrank() << endl;
-    MPI_Request request_send, request_recv;
-    MPI_Status status;
+
     vector<uint> trans_h_Vp = pt.gettrans_h_Vp();
     auto begin = trans_h_Vp.begin();
     if(*(begin + TOP))
-    {
+    {//cout << "what" << endl;
         dataTransport_Vp(plan->h_Vp, pt, BOTTOM_TO_TOP, Pa);
     }
     if(*(begin + LEFT))
-    {
+    {//cout << "what" << endl;
         dataTransport_Vp(plan->h_Vp, pt, RIGHT_TO_LEFT, Pa);
     }
     if(*(begin + BOTTOM))
-    {
+    {//cout << "what" << endl;
         dataTransport_Vp(plan->h_Vp, pt, TOP_TO_BOTTOM, Pa);
     }
     if(*(begin + RIGHT))
-    {
+    {//cout << "what" << endl;
         dataTransport_Vp(plan->h_Vp, pt, LEFT_TO_RIGHT, Pa);
     }
 
-    if(temph_Vp.topborder)
-    {
-        dataGather(plan->h_Vp, pt, TOP_TO_BOTTOM);
-    }
-    if(temph_Vp.leftborder)
-    {
-        dataGather(plan->h_Vp, pt, RIGHT_TO_LEFT);
-    }
-    if(temph_Vp.bottomborder)
-    {
-        dataGather(plan->h_Vp, pt, BOTTOM_TO_TOP);
-    }
-    if(temph_Vp.rightborder)
-    {
-        dataGather(plan->h_Vp, pt, LEFT_TO_RIGHT);
-    }
-cout << "pppppp" << pt.getrank() << endl;
+    dataGather(plan->h_Vp, pt, STEP_VP);
+
+//    if(temph_Vp.topborder)
+//    {//cout << "eee" << endl;
+//        dataGather(plan->h_Vp, pt, BOTTOM_TO_TOP);
+//    }
+//    if(temph_Vp.leftborder)
+//    {//cout << "eee" << endl;
+//        dataGather(plan->h_Vp, pt, RIGHT_TO_LEFT);
+//    }
+//    if(temph_Vp.bottomborder)
+//    {//cout << "eee" << endl;
+//        dataGather(plan->h_Vp, pt, TOP_TO_BOTTOM);
+//    }
+//    if(temph_Vp.rightborder)
+//    {//cout << "eee" << endl;
+//        dataGather(plan->h_Vp, pt, LEFT_TO_RIGHT);
+//    }
+//cout << "pppppp" << pt.getrank() << endl;
     UpdateVpPML(Pa, plan->h_Vp, plan->h_Grad, ip->Alpha, pt);
-cout << "qqqqqq" << pt.getrank() << endl;
+//cout << "qqqqqq" << pt.getrank() << endl;
+
+
+
+
+
     for(uint i = 0; i < block_z; ++i)
     {
-        memcpy(ip->CurrVp + i * block_x, plan->h_Vp + (i + temph_Vp.topborder) * temph_Vp.length_x + temph_Vp.leftborder, sizeof(float) * block_x);
+        memcpy(ip->CurrVp + i * block_x, plan->h_Vp + (i + temph_Vp.topborder) * temph_Vp.length_x + temph_Vp.leftborder, block_x * sizeof(float));
     }
 
     ip->Alpha = 0.0f;

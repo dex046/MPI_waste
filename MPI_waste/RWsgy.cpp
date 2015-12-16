@@ -2,6 +2,7 @@
  * author:dwx
  * 2015.11.7
  ******************************************/
+
 #include "RWsgy.h"
 #include "Partition.h"
 #include "mpi.h"
@@ -237,22 +238,22 @@ bool ReadSgyData(char FileName[], Trace *trace, REEL reel,
     // 根据文件中数据的存储形式来开辟空间
     if (*DFormat == 1 || *DFormat == 5)
     {
-        TempData1 = new float[length_x];
+        TempData1 = new float[length_z];
         memset((void *)TempData1, 0, sizeof(float) * length_z);//zhe li yong sizeof houmian que xie si le
     }
     else if (*DFormat == 2)
     {
-        TempData2 = new int[length_x];
+        TempData2 = new int[length_z];
         memset((void *)TempData2, 0, sizeof(int) * length_z);
     }
     else if (*DFormat == 3)
     {
-        TempData3 = new short[length_x];
+        TempData3 = new short[length_z];
         memset((void *)TempData3, 0, sizeof(short) * length_z);
     }
     else if (*DFormat == 4)
     {
-        TempData4 = new double[length_x];
+        TempData4 = new double[length_z];
         memset((void *)TempData4, 0, sizeof(double) * length_z);
     }
 
@@ -271,6 +272,8 @@ bool ReadSgyData(char FileName[], Trace *trace, REEL reel,
         MPI_File_read_at(fdata, offset + 3200, &(reel).reelstruct, 400, MPI_BYTE, &status);
         offset += 3600;
     }
+
+
 
     int indexmin_x = pt.getindexmin_x();
     int indexmin_z = pt.getindexmin_z();
@@ -392,7 +395,10 @@ bool ReadSgyData(char FileName[], Trace *trace, REEL reel,
         }
     }
 
+
+//cout << "oooooo" << endl;
     MPI_File_close(&fdata);
+
 
     if (*DFormat == 1 || *DFormat == 5)
     {
@@ -410,6 +416,8 @@ bool ReadSgyData(char FileName[], Trace *trace, REEL reel,
     {
         delete []TempData4;//mei chu xian TempData4
     }
+//cout << "oooooo" << endl;
+    //MPI_Barrier(MPI_COMM_WORLD);
 
     return true;
 }
@@ -447,6 +455,9 @@ bool WriteSgy(const char * const FileName, unsigned char *f3200, Trace *trace, u
 
         block_x = pt.getinteriorLength_x();
         block_z = pt.getinteriorLength_z();
+
+//        if(!block_x || !block_z)
+//            return false;
     }
     else if(tag == WRITE_ALL)
     {

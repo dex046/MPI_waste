@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE QtCreatorProject>
-<!-- Written by QtCreator 3.2.1, 2015-11-15T15:15:10. -->
+<!-- Written by QtCreator 3.2.1, 2015-12-07T22:37:58. -->
 <qtcreator>
  <data>
   <variable>EnvironmentId</variable>
@@ -859,7 +859,7 @@
     </valuelist>
     <value type="int" key="PE.EnvironmentAspect.Base">2</value>
     <valuelist type="QVariantList" key="PE.EnvironmentAspect.Changes"/>
-    <value type="QString" key="ProjectExplorer.CustomExecutableRunConfiguration.Arguments">-n 6 ./MPI_waste</value>
+    <value type="QString" key="ProjectExplorer.CustomExecutableRunConfiguration.Arguments">-n 4 ./MPI_waste</value>
     <value type="QString" key="ProjectExplorer.CustomExecutableRunConfiguration.Executable">/lib64/mpich/bin/mpirun</value>
     <value type="bool" key="ProjectExplorer.CustomExecutableRunConfiguration.UseTerminal">false</value>
     <value type="QString" key="ProjectExplorer.CustomExecutableRunConfiguration.WorkingDirectory">/home/xtay/waste/MPI_waste</value>

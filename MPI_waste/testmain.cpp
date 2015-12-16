@@ -54,9 +54,24 @@ int main(int argc, char ** argv)
         ip->St[i].rn = 510;
     }
 
+    //MPI_Barrier(MPI_COMM_WORLD);
+
+
     uint cpu_x = 2, cpu_z = 2;
     Partition pt(Pa, ip, nnx, nnz, cpu_x, cpu_z, temph_U, temph_VW, 8, rank, p_size);//borderlength = 4
 
+//    if(rank == 39)
+//    {
+//        cout << pt.geth_Coord_length() << endl;
+//    }
+
+
+    if(rank == 0)
+    {
+        vector<uint> temp = pt.gettrans_h_Vp();
+        auto tempbegin = temp.begin();
+        //cout << *(tempbegin + 0) << " " << *(tempbegin + 1) << " " << *(tempbegin + 2) << " " << *(tempbegin + 3) << " " << endl;
+    }
 
     uint length_x = pt.getblockLength_x();
     uint length_z = pt.getblockLength_z();
@@ -67,8 +82,8 @@ int main(int argc, char ** argv)
     uint interiorlength_z = pt.getinteriorLength_z();
 
     //MPI_Barrier(MPI_COMM_WORLD);
-    if(rank == 0)
-    cout << rank << " " << length_x << endl;
+//    if(rank == 0)
+//    cout << rank << " " << length_x << endl;
     MPI_Barrier(MPI_COMM_WORLD);
     //cout << "rank=" << rank << " " << interiorlength_z << endl;
 
@@ -79,6 +94,8 @@ int main(int argc, char ** argv)
     uint indexmax_x = pt.getindexmax_x();
     uint indexmin_z = pt.getindexmin_z();
     uint indexmax_z = pt.getindexmax_z();
+
+
 
     try
     {
@@ -133,6 +150,9 @@ int main(int argc, char ** argv)
     // 给全局变量开辟空间
     MallocVariables(*Pa, ip, plan, pt);
 
+
+
+//cout << "oooooooooo" << rank << endl;
     // 求取NPML的参数
     GenerateNPML(*Pa, plan, pt);
 
@@ -175,7 +195,10 @@ int main(int argc, char ** argv)
     // 迭代过程中为了求取步长使用的试探步长
     float e = 24.0f;
 
-
+//    if(rank == 15)
+//    {
+//        cout << rank << endl;
+//    }
     for (uint It = 0; It < ip->IterN; It++)
     {
         // 求取梯度
@@ -186,17 +209,21 @@ int main(int argc, char ** argv)
         }
 
         begin = clock();
-        CalGrad(*Pa, ip, plan, sgs_t, sgs_c, sgs_r, It, pt);
+        CalGrad(*Pa, ip, plan, sgs_t, sgs_c, sgs_r, It, pt);//cout << rank << endl;
 
         MPI_Barrier(MPI_COMM_WORLD);
+cout << "ooooooo" << pt.getrank() << endl;
+
 
         //cout << ip->ObjIter[It] << endl;
         // 梯度后处理
         PostProcessGrad(*Pa, ip->GradVp, plan->h_Vp, pt);
-
+//cout << "aaaaaaa" << pt.getrank() << endl;
         // 求取步长
-        CalStepLength(*Pa, ip, plan, sgs_t, sgs_c, e, pt);
+        CalStepLength(*Pa, ip, plan, sgs_t, sgs_c, e, pt);//cout << rank << endl;
         duration = clock() - begin;
+
+
 
         MPI_Barrier(MPI_COMM_WORLD);
         if(rank == ROOT_ID)
@@ -206,9 +233,117 @@ int main(int argc, char ** argv)
             cout << "\tThe " << It << "th iteration used " << duration / CLOCKS_PER_SEC << "s" << endl;
         }
 
+        ip->Alpha = 152.931;
         // 下一步迭代预处理
-        //PreProcess(*Pa, ip, plan, pt);
+        PreProcess(*Pa, ip, plan, pt);
+        MPI_Barrier(MPI_COMM_WORLD);
+
     }
+
+    if(rank == 0)
+    {
+        ofstream fout("GradVp0.txt");
+        for(int i = 0; i < interiorlength_z; ++i)
+        {
+            for(int j = 0; j < interiorlength_x; ++j)
+            {
+                fout << *(ip->GradVp + i * interiorlength_x + j) << " ";
+            }
+            fout << endl;
+        }
+    }
+
+    if(rank == 1)
+    {
+        ofstream fout("GradVp1.txt");
+        for(int i = 0; i < interiorlength_z; ++i)
+        {
+            for(int j = 0; j < interiorlength_x; ++j)
+            {
+                fout << *(ip->GradVp + i * interiorlength_x + j) << " ";
+            }
+            fout << endl;
+        }
+    }
+
+    if(rank == 2)
+    {
+        ofstream fout("GradVp2.txt");
+        for(int i = 0; i < interiorlength_z; ++i)
+        {
+            for(int j = 0; j < interiorlength_x; ++j)
+            {
+                fout << *(ip->GradVp + i * interiorlength_x + j) << " ";
+            }
+            fout << endl;
+        }
+    }
+
+    if(rank == 3)
+    {
+        ofstream fout("GradVp3.txt");
+        for(int i = 0; i < interiorlength_z; ++i)
+        {
+            for(int j = 0; j < interiorlength_x; ++j)
+            {
+                fout << *(ip->GradVp + i * interiorlength_x + j) << " ";
+            }
+            fout << endl;
+        }
+    }
+
+    if(rank == 0)
+    {
+        ofstream fout("CurrVp0.txt");
+        for(int i = 0; i < length_z; ++i)
+        {
+            for(int j = 0; j < length_x; ++j)
+            {
+                fout << *(ip->CurrVp + i * length_x + j) << " ";
+            }
+            fout << endl;
+        }
+    }
+
+    if(rank == 1)
+    {
+        ofstream fout("CurrVp1.txt");
+        for(int i = 0; i < length_z; ++i)
+        {
+            for(int j = 0; j < length_x; ++j)
+            {
+                fout << *(ip->CurrVp + i * length_x + j) << " ";
+            }
+            fout << endl;
+        }
+    }
+
+    if(rank == 2)
+    {
+        ofstream fout("CurrVp2.txt");
+        for(int i = 0; i < length_z; ++i)
+        {
+            for(int j = 0; j < length_x; ++j)
+            {
+                fout << *(ip->CurrVp + i * length_x + j) << " ";
+            }
+            fout << endl;
+        }
+    }
+
+    if(rank == 3)
+    {
+        ofstream fout("CurrVp3.txt");
+        for(int i = 0; i < length_z; ++i)
+        {
+            for(int j = 0; j < length_x; ++j)
+            {
+                fout << *(ip->CurrVp + i * length_x + j) << " ";
+            }
+            fout << endl;
+        }
+    }
+
 
     if(rank == ROOT_ID)
     {
@@ -225,6 +360,7 @@ int main(int argc, char ** argv)
 
     write_sgs_t_Data(TrueSg, (usht)Pa->Nt, ip->St[0].rn, (usht)(Pa->dt * 1000000), sgs_t, pt, *Pa, 1);
     WriteData(GradVp, Pa->Nz, Pa->Nx, Pa->dz * 1000, ip->GradVp, pt, *Pa, 0, WRITE_INTER);
+    MPI_Barrier(MPI_COMM_WORLD);
     WriteData(InvertedVp, nnz, nnx, Pa->dz * 1000, ip->CurrVp, pt, *Pa, 0, WRITE_ALL);
 
     MPI_Barrier(MPI_COMM_WORLD);

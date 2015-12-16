@@ -610,12 +610,17 @@ void dataTransport_Vp(float *data, const Partition& pt, int tag, const AFDPU2D &
     uint sumBlock_z = pt.getsumBlock_z();
     uint block_x = pt.getblockLength_x();
     uint block_z = pt.getblockLength_z();
+    //cout << rank << endl;
+//    if(rank == 15)
+//    {
+//        cout << "ooooooooooo" << endl;
+//    }
 
     int transportlength_z = 1;
 
-    if(tag == RIGHT_TO_LEFT && !pt.isfirstblock_x())
+    if(tag == RIGHT_TO_LEFT)
     {
-        for(uint i = 1; i < blockPosition_x; ++i)
+        for(uint i = 1; i <= blockPosition_x; ++i)
         {
             uint length = 1 * block_z;
             float *buf = new float[length];
@@ -623,9 +628,9 @@ void dataTransport_Vp(float *data, const Partition& pt, int tag, const AFDPU2D &
             MPI_Send(buf, length, MPI_FLOAT, rank - i, STEP_VP + RIGHT_TO_LEFT, MPI_COMM_WORLD);
         }
     }
-    if(tag == LEFT_TO_RIGHT && !pt.islastblock_x())
+    if(tag == LEFT_TO_RIGHT)
     {
-        for(uint i = 1; i <= sumBlock_x - blockPosition_x; ++i)
+        for(uint i = 1; i < sumBlock_x - blockPosition_x; ++i)
         {
             uint length = 1 * block_z;
             float *buf = new float[length];
@@ -633,9 +638,9 @@ void dataTransport_Vp(float *data, const Partition& pt, int tag, const AFDPU2D &
             MPI_Send(buf, length, MPI_FLOAT, rank + i, STEP_VP + LEFT_TO_RIGHT, MPI_COMM_WORLD);
         }
     }
-    if(tag == BOTTOM_TO_TOP && !pt.isfirstblock_z())
+    if(tag == BOTTOM_TO_TOP)
     {
-        for(uint i = 1; i < blockPosition_z ; ++i)
+        for(uint i = 1; i <= blockPosition_z ; ++i)
         {
             uint length = 1 * block_x;
             float *buf = new float[length];
@@ -643,9 +648,9 @@ void dataTransport_Vp(float *data, const Partition& pt, int tag, const AFDPU2D &
             MPI_Send(buf, length, MPI_FLOAT, rank - (i * sumBlock_x), STEP_VP + BOTTOM_TO_TOP, MPI_COMM_WORLD);
         }
     }
-    if(tag == TOP_TO_BOTTOM && !pt.islastblock_z())
-    {
-        for(uint i = 1; i <= sumBlock_z - blockPosition_z; ++i)
+    if(tag == TOP_TO_BOTTOM)
+    {//cout << "wwwwww" << rank << endl;
+        for(uint i = 1; i < sumBlock_z - blockPosition_z; ++i)
         {
             uint length = 1 * block_x;
             float *buf = new float[length];

@@ -21,6 +21,8 @@
 #define STEP_FEN 16
 #define STEP_MAX 17
 #define STEP_OBJ 18
+#define STEP_MAX_RL 19
+#define STEP_MIN_RL 20
 
 //#define UpdateVpPML 3
 void dataTransport(float *data, const Partition& pt, int tag, int it);

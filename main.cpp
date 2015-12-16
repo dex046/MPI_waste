@@ -152,9 +152,88 @@ int main()
 		cout << "\tThe " << It << "th iteration used " << duration / CLOCKS_PER_SEC << "s" << endl;
 
 		// 下一步迭代预处理
-		PreProcess(*Pa, ip, plan);
+        PreProcess(*Pa, ip, plan);
 	}
 
+    ofstream fout0("RGradVp0.txt");
+    for(int i = 0; i < 67; ++i)
+    {
+        for(int j = 0; j < 255; ++j)
+        {
+            fout0 << *(ip->GradVp + i * Pa->Nx + j) << " ";
+        }
+        fout0 << endl;
+    }
+
+    ofstream fout1("RGradVp1.txt");
+    for(int i = 0; i < 67; ++i)
+    {
+        for(int j = 255; j < 510; ++j)
+        {
+            fout1 << *(ip->GradVp + i * Pa->Nx + j) << " ";
+        }
+        fout1 << endl;
+    }
+
+    ofstream fout2("RGradVp2.txt");
+    for(int i = 67; i < 134; ++i)
+    {
+        for(int j = 0; j < 255; ++j)
+        {
+            fout2 << *(ip->GradVp + i * Pa->Nx + j) << " ";
+        }
+        fout2 << endl;
+    }
+
+    ofstream fout3("RGradVp3.txt");
+    for(int i = 67; i < 134; ++i)
+    {
+        for(int j = 255; j < 510; ++j)
+        {
+            fout3 << *(ip->GradVp + i * Pa->Nx + j) << " ";
+        }
+        fout3 << endl;
+    }
+
+    ofstream fout4("RCurrVp0.txt", ios_base::out | ios_base::trunc);
+    for(int i = 0; i < 117; ++i)
+    {
+        for(int j = 0; j < 305; ++j)
+        {
+            fout4 << *(ip->CurrVp + i * nnx + j) << " ";
+        }
+        fout4 << endl;
+    }
+
+    ofstream fout5("RCurrVp1.txt", ios_base::out | ios_base::trunc);
+    for(int i = 0; i < 117; ++i)
+    {
+        for(int j = 305; j < 610; ++j)
+        {
+            fout5 << *(ip->CurrVp + i * nnx + j) << " ";
+        }
+        fout5 << endl;
+    }
+
+    ofstream fout6("RCurrVp2.txt", ios_base::out | ios_base::trunc);
+    for(int i = 117; i < 234; ++i)
+    {
+        for(int j = 0; j < 305; ++j)
+        {
+            fout6 << *(ip->CurrVp + i * nnx + j) << " ";
+        }
+        fout6 << endl;
+    }
+
+    ofstream fout7("RCurrVp3.txt", ios_base::out | ios_base::trunc);
+    for(int i = 117; i < 234; ++i)
+    {
+        for(int j = 305; j < 610; ++j)
+        {
+            fout7 << *(ip->CurrVp + i * nnx + j) << " ";
+        }
+        fout7 << endl;
+    }
 
 	cout << "\tWriting data to .sgy" << endl;
 
