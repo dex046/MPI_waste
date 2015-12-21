@@ -42,7 +42,7 @@ int main(int argc, char ** argv)
     IP *ip;
     ip = new IP[1];
     memset((void *)ip, 0, sizeof(IP));
-    ip->ShotN = 1;
+    ip->ShotN = 48;
     ip->IterN = 1;
     ip->Alpha = 0.0f;
 
@@ -52,6 +52,8 @@ int main(int argc, char ** argv)
     for(uint i = 0; i < ip->ShotN; ++i)
     {
         ip->St[i].rn = 510;
+        ip->St[i].s.Sx = Pa->PMLx + i * 10;
+        ip->St[i].s.Sz = Pa->PMLz + 2;
     }
 
     //MPI_Barrier(MPI_COMM_WORLD);
@@ -130,22 +132,31 @@ int main(int argc, char ** argv)
 
     float *sgs_t = NULL, *sgs_c = NULL, *sgs_r = NULL;
 
-    try
+    uint shot_num = pt.getShot_num();
+
+    if(RL_num)
     {
-        sgs_t = new float[ip->ShotN * Pa->Nt * RL_num];// 反演中的炮数 * 正演的时间步数 * 检波器个数
-        memset((void *)sgs_t, 0,
-            sizeof(float) * ip->ShotN * Pa->Nt * RL_num);
-        sgs_c = new float[ip->ShotN * Pa->Nt * RL_num];
-        memset((void *)sgs_c, 0,
-            sizeof(float) * ip->ShotN * Pa->Nt * RL_num);
-        sgs_r = new float[ip->ShotN * Pa->Nt * RL_num];
-        memset((void *)sgs_r, 0,
-            sizeof(float) * ip->ShotN * Pa->Nt * RL_num);
+        //cout << "ppppp" << rank << " " << RL_num << endl;
+        try
+        {
+            sgs_t = new float[ip->ShotN * Pa->Nt * RL_num];// 反演中的炮数 * 正演的时间步数 * 检波器个数
+            memset((void *)sgs_t, 0, sizeof(float) * ip->ShotN * Pa->Nt * RL_num);
+
+            sgs_c = new float[ip->ShotN * Pa->Nt * RL_num];
+            memset((void *)sgs_c, 0, sizeof(float) * ip->ShotN * Pa->Nt * RL_num);
+
+            sgs_r = new float[ip->ShotN * Pa->Nt * RL_num];
+            memset((void *)sgs_r, 0, sizeof(float) * ip->ShotN * Pa->Nt * RL_num);
+
+            //cout << "sgs_t " << ip->ShotN * Pa->Nt * RL_num << endl;
+        }
+        catch(const std::bad_alloc& e)
+        {
+            cout << "1Allocation failed: " << e.what() << endl;
+        }
     }
-    catch(const std::bad_alloc& e)
-    {
-        cout << "Allocation failed: " << e.what() << endl;
-    }
+
+
 
     // 给全局变量开辟空间
     MallocVariables(*Pa, ip, plan, pt);
@@ -210,15 +221,16 @@ int main(int argc, char ** argv)
 
         begin = clock();
         CalGrad(*Pa, ip, plan, sgs_t, sgs_c, sgs_r, It, pt);//cout << rank << endl;
-
+        //cout << "ooooooo" << pt.getrank() << endl;
         MPI_Barrier(MPI_COMM_WORLD);
-cout << "ooooooo" << pt.getrank() << endl;
+
 
 
         //cout << ip->ObjIter[It] << endl;
         // 梯度后处理
         PostProcessGrad(*Pa, ip->GradVp, plan->h_Vp, pt);
-//cout << "aaaaaaa" << pt.getrank() << endl;
+        MPI_Barrier(MPI_COMM_WORLD);
+//cout << "ooooooo" << pt.getrank() << endl;
         // 求取步长
         CalStepLength(*Pa, ip, plan, sgs_t, sgs_c, e, pt);//cout << rank << endl;
         duration = clock() - begin;
@@ -233,116 +245,116 @@ cout << "ooooooo" << pt.getrank() << endl;
             cout << "\tThe " << It << "th iteration used " << duration / CLOCKS_PER_SEC << "s" << endl;
         }
 
-        ip->Alpha = 152.931;
+        //ip->Alpha = 152.931;
         // 下一步迭代预处理
         PreProcess(*Pa, ip, plan, pt);
         MPI_Barrier(MPI_COMM_WORLD);
 
     }
 
-    if(rank == 0)
-    {
-        ofstream fout("GradVp0.txt");
-        for(int i = 0; i < interiorlength_z; ++i)
-        {
-            for(int j = 0; j < interiorlength_x; ++j)
-            {
-                fout << *(ip->GradVp + i * interiorlength_x + j) << " ";
-            }
-            fout << endl;
-        }
-    }
+//    if(rank == 0)
+//    {
+//        ofstream fout("GradVp0.txt");
+//        for(int i = 0; i < interiorlength_z; ++i)
+//        {
+//            for(int j = 0; j < interiorlength_x; ++j)
+//            {
+//                fout << *(ip->GradVp + i * interiorlength_x + j) << " ";
+//            }
+//            fout << endl;
+//        }
+//    }
 
-    if(rank == 1)
-    {
-        ofstream fout("GradVp1.txt");
-        for(int i = 0; i < interiorlength_z; ++i)
-        {
-            for(int j = 0; j < interiorlength_x; ++j)
-            {
-                fout << *(ip->GradVp + i * interiorlength_x + j) << " ";
-            }
-            fout << endl;
-        }
-    }
+//    if(rank == 1)
+//    {
+//        ofstream fout("GradVp1.txt");
+//        for(int i = 0; i < interiorlength_z; ++i)
+//        {
+//            for(int j = 0; j < interiorlength_x; ++j)
+//            {
+//                fout << *(ip->GradVp + i * interiorlength_x + j) << " ";
+//            }
+//            fout << endl;
+//        }
+//    }
 
-    if(rank == 2)
-    {
-        ofstream fout("GradVp2.txt");
-        for(int i = 0; i < interiorlength_z; ++i)
-        {
-            for(int j = 0; j < interiorlength_x; ++j)
-            {
-                fout << *(ip->GradVp + i * interiorlength_x + j) << " ";
-            }
-            fout << endl;
-        }
-    }
+//    if(rank == 2)
+//    {
+//        ofstream fout("GradVp2.txt");
+//        for(int i = 0; i < interiorlength_z; ++i)
+//        {
+//            for(int j = 0; j < interiorlength_x; ++j)
+//            {
+//                fout << *(ip->GradVp + i * interiorlength_x + j) << " ";
+//            }
+//            fout << endl;
+//        }
+//    }
 
-    if(rank == 3)
-    {
-        ofstream fout("GradVp3.txt");
-        for(int i = 0; i < interiorlength_z; ++i)
-        {
-            for(int j = 0; j < interiorlength_x; ++j)
-            {
-                fout << *(ip->GradVp + i * interiorlength_x + j) << " ";
-            }
-            fout << endl;
-        }
-    }
+//    if(rank == 3)
+//    {
+//        ofstream fout("GradVp3.txt");
+//        for(int i = 0; i < interiorlength_z; ++i)
+//        {
+//            for(int j = 0; j < interiorlength_x; ++j)
+//            {
+//                fout << *(ip->GradVp + i * interiorlength_x + j) << " ";
+//            }
+//            fout << endl;
+//        }
+//    }
 
-    if(rank == 0)
-    {
-        ofstream fout("CurrVp0.txt");
-        for(int i = 0; i < length_z; ++i)
-        {
-            for(int j = 0; j < length_x; ++j)
-            {
-                fout << *(ip->CurrVp + i * length_x + j) << " ";
-            }
-            fout << endl;
-        }
-    }
+//    if(rank == 0)
+//    {
+//        ofstream fout("CurrVp0.txt");
+//        for(int i = 0; i < length_z; ++i)
+//        {
+//            for(int j = 0; j < length_x; ++j)
+//            {
+//                fout << *(ip->CurrVp + i * length_x + j) << " ";
+//            }
+//            fout << endl;
+//        }
+//    }
 
-    if(rank == 1)
-    {
-        ofstream fout("CurrVp1.txt");
-        for(int i = 0; i < length_z; ++i)
-        {
-            for(int j = 0; j < length_x; ++j)
-            {
-                fout << *(ip->CurrVp + i * length_x + j) << " ";
-            }
-            fout << endl;
-        }
-    }
+//    if(rank == 1)
+//    {
+//        ofstream fout("CurrVp1.txt");
+//        for(int i = 0; i < length_z; ++i)
+//        {
+//            for(int j = 0; j < length_x; ++j)
+//            {
+//                fout << *(ip->CurrVp + i * length_x + j) << " ";
+//            }
+//            fout << endl;
+//        }
+//    }
 
-    if(rank == 2)
-    {
-        ofstream fout("CurrVp2.txt");
-        for(int i = 0; i < length_z; ++i)
-        {
-            for(int j = 0; j < length_x; ++j)
-            {
-                fout << *(ip->CurrVp + i * length_x + j) << " ";
-            }
-            fout << endl;
-        }
-    }
+//    if(rank == 2)
+//    {
+//        ofstream fout("CurrVp2.txt");
+//        for(int i = 0; i < length_z; ++i)
+//        {
+//            for(int j = 0; j < length_x; ++j)
+//            {
+//                fout << *(ip->CurrVp + i * length_x + j) << " ";
+//            }
+//            fout << endl;
+//        }
+//    }
 
-    if(rank == 3)
-    {
-        ofstream fout("CurrVp3.txt");
-        for(int i = 0; i < length_z; ++i)
-        {
-            for(int j = 0; j < length_x; ++j)
-            {
-                fout << *(ip->CurrVp + i * length_x + j) << " ";
-            }
-            fout << endl;
-        }
-    }
+//    if(rank == 3)
+//    {
+//        ofstream fout("CurrVp3.txt");
+//        for(int i = 0; i < length_z; ++i)
+//        {
+//            for(int j = 0; j < length_x; ++j)
+//            {
+//                fout << *(ip->CurrVp + i * length_x + j) << " ";
+//            }
+//            fout << endl;
+//        }
+//    }
 
 
     if(rank == ROOT_ID)

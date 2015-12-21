@@ -1318,6 +1318,7 @@ void CalTrueWF(AFDPU2D Pa,
 //            cout << *(ip->TrueVp + i);
     for (uint is = 0; is < ip->ShotN; is++)// 反演中的炮数
 	{
+        cout << "CalTrueWF " << is << endl;
 		memset((void *)plan->h_PHIx_U_x,	0,	sizeof(float) * nnz * nnx);
 		memset((void *)plan->h_PHIz_U_z,	0,	sizeof(float) * nnz * nnx);
 		memset((void *)plan->h_PHIx_V_x,	0,	sizeof(float) * nnz * nnx);
@@ -1421,25 +1422,76 @@ void CalTrueWF(AFDPU2D Pa,
 			plan->h_TrueWF,
 			Pa.Nt * ip->St[is].rn * sizeof(float));
 
-        ofstream fout("Rsgs_t0.txt");
-        ofstream fout1("Rsgs_t1.txt");
-//        ofstream fout2("sgs_t2.txt");
-//        ofstream fout3("sgs_t3.txt");
+
+
+
+        if(is == 0)
+        {
+            ofstream fout2("sgs_t2.txt");
+            ofstream fout3("sgs_t3.txt");
+            for(int is = 0; is < ip->ShotN; ++is)
+            {
+                for(int i = 255; i < 510; ++i)
+                {
+                    for(int j = 0; j < Pa.Nt; ++j)
+                        fout2 << *(sgs_t + is * 510 * Pa.Nt + i * Pa.Nt + j) << " ";
+                    //
+                }
+                fout2 << endl;
+            }
+
+
+            for(int is = 0; is < ip->ShotN; ++is)
+            {
+                for(int i = 255; i < 510; ++i)
+                {
+                    for(int j = 0; j < Pa.Nt; ++j)
+                        fout3 << *(sgs_t + is * 510 * Pa.Nt + i * Pa.Nt + j) << " ";
+                    //
+                }
+                fout3 << endl;
+            }
+
+
+            fout2.flush();
+            fout3.flush();
+
+
+            fout2.close();
+            fout3.close();
+        }
+	}
+    ofstream fout("sgs_t0.txt");
+    ofstream fout1("sgs_t1.txt");
+
+    for(int is = 0; is < ip->ShotN; ++is)
+    {
         for(int i = 0; i < 255; ++i)
         {
             for(int j = 0; j < Pa.Nt; ++j)
-                fout << *(sgs_t + i * Pa.Nt + j) << " ";
+                fout << *(sgs_t + is * 510 * Pa.Nt + i * Pa.Nt + j) << " ";
             //
         }
-        fout << endl;
+
+    }
+    fout << endl;
+
+    for(int is = 0; is < ip->ShotN; ++is)
+    {
         for(int i = 255; i < 510; ++i)
         {
             for(int j = 0; j < Pa.Nt; ++j)
-                fout1 << *(sgs_t + i * Pa.Nt + j) << " ";
+                fout1 << *(sgs_t + is * 510 * Pa.Nt + i * Pa.Nt + j) << " ";
             //
         }
-        fout1 << endl;
-	}
+
+    }
+    fout1 << endl;
+
+    fout.flush();
+    fout1.flush();
+    fout.close();
+    fout1.close();
 }
 
 /*------------------------------------------------------------------------
@@ -1480,6 +1532,7 @@ void CalGrad(AFDPU2D Pa,
 	// 对炮进行循环
 	for (uint is = 0; is < ip->ShotN; is++)
 	{
+        cout << "CalGrad " << is << endl;
 		memset((void *)plan->h_PHIx_U_x,	0,	sizeof(float) * nnz * nnx);
 		memset((void *)plan->h_PHIz_U_z,	0,	sizeof(float) * nnz * nnx);
 		memset((void *)plan->h_PHIx_V_x,	0,	sizeof(float) * nnz * nnx);
@@ -1571,16 +1624,27 @@ void CalGrad(AFDPU2D Pa,
 			Pa.Nt * ip->St[is].rn * sizeof(float));
 
 
-//        ofstream fout("h_CurrWF1.txt");
-//        //if(rank == 0)
-//        for(uint i = 0; i < 255; ++i)
-//        {
-//            for(uint j = 0; j < Pa.Nt; ++j)
-//            {
-//                fout << plan->h_CurrWF[i * Pa.Nt + j] << " ";
-//            }
-//        }
-//        fout << endl;
+        ofstream fout("h_CurrWF0.txt");
+        //if(rank == 0)
+        for(uint i = 0; i < 255; ++i)
+        {
+            for(uint j = 0; j < Pa.Nt; ++j)
+            {
+                fout << plan->h_CurrWF[i * Pa.Nt + j] << " ";
+            }
+        }
+        fout << endl;
+
+        ofstream fout0("h_CurrWF1.txt");
+        //if(rank == 0)
+        for(uint i = 255; i < 510; ++i)
+        {
+            for(uint j = 0; j < Pa.Nt; ++j)
+            {
+                fout0 << plan->h_CurrWF[i * Pa.Nt + j] << " ";
+            }
+        }
+        fout0 << endl;
 
 
 		//  残差反传以及正传波场逆时间反推 
@@ -1667,7 +1731,7 @@ void CalGrad(AFDPU2D Pa,
             for(uint mm = 0; mm < Pa.Nt; ++mm)
                 ip->ObjIter[It] += 0.5f * powf(plan->h_ResWF[m * Pa.Nt + mm], 2.0f);
 		}
-        cout << ip->ObjIter[It] << endl;
+        //cout << ip->ObjIter[It] << endl;
         float temp = ip->ObjIter[It];
         //ofstream fout("test2.txt");
         //ip->ObjIter[It] = 0;
@@ -1680,20 +1744,60 @@ void CalGrad(AFDPU2D Pa,
             }
 
         }
-        cout << ip->ObjIter[It] << endl;
+        cout << is << " " << ip->ObjIter[It] << endl;
 //        ip->ObjIter[It] += temp;
 //        cout << ip->ObjIter[It];
 	}
 
-//    ofstream fout("GradVp0.txt");
-//    for(int i = 0; i < 67; ++i)
-//    {
-//        for(int j = 0; j < 255; ++j)
-//        {
-//            fout << plan->h_Grad[i * Pa.Nx + j] << " ";
-//        }
-//    }
-//    fout << endl;
+    ofstream fout0("GradVp0.txt");
+    for(int i = 0; i < 67; ++i)
+    {
+        for(int j = 0; j < 255; ++j)
+        {
+            fout0 << plan->h_Grad[i * Pa.Nx + j] << " ";
+        }
+    }
+    fout0 << endl;
+
+    ofstream fout1("GradVp1.txt");
+    for(int i = 0; i < 67; ++i)
+    {
+        for(int j = 255; j < 510; ++j)
+        {
+            fout1 << plan->h_Grad[i * Pa.Nx + j] << " ";
+        }
+    }
+    fout1 << endl;
+
+    ofstream fout2("GradVp2.txt");
+    for(int i = 67; i < 134; ++i)
+    {
+        for(int j = 0; j < 255; ++j)
+        {
+            fout2 << plan->h_Grad[i * Pa.Nx + j] << " ";
+        }
+    }
+    fout2 << endl;
+
+    ofstream fout3("GradVp3.txt");
+    for(int i = 67; i < 134; ++i)
+    {
+        for(int j = 255; j < 510; ++j)
+        {
+            fout3 << plan->h_Grad[i * Pa.Nx + j] << " ";
+        }
+    }
+    fout3 << endl;
+
+    fout0.flush();
+    fout1.flush();
+    fout2.flush();
+    fout3.flush();
+
+    fout0.close();
+    fout1.close();
+    fout2.close();
+    fout3.close();
 
 	// 输出梯度
 	memcpy(ip->GradVp, plan->h_Grad, Pa.Nz * Pa.Nx * sizeof(float));
@@ -1867,8 +1971,8 @@ void CalStepLength(AFDPU2D Pa,
 		fenmu += plan->h_SumResTrial[m] * plan->h_SumResTrial[m];
 	}
 
-    cout << "fenzi=" << fenzi << endl;
-    cout << "fenmu=" << fenmu << endl;
+//    cout << "fenzi=" << fenzi << endl;
+//    cout << "fenmu=" << fenmu << endl;
 	ip->Alpha = (fenzi / fenmu) * e;
 }
 

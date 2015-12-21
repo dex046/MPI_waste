@@ -110,7 +110,7 @@ float MatMax(float *Mat,
 void AddSource(AFDPU2D Pa,
                 float *h_U,
                 float Wave,
-                float *h_Vp, const Partition &pt);
+                float *h_Vp, SL s, const Partition &pt);
 
 // 一步更新波场U的卷积项
 void StepPHIU(AFDPU2D Pa,

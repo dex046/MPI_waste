@@ -44,11 +44,9 @@ Partition::Partition(const AFDPU2D *Pa, const IP *ip, uint totallength_x, uint t
 
     for (uint is = 0; is < ip->ShotN; is++)
     {
-        int temp_x = Pa->PMLx + is * 10 + 200;
-        int temp_z = Pa->PMLz + 2;
-        if(temp_x >= indexmin_x && temp_x <= indexmax_x && temp_z >= indexmin_z && temp_z <= indexmax_z)
+        if(ip->St[is].s.Sx >= indexmin_x && ip->St[is].s.Sx <= indexmax_x && ip->St[is].s.Sz >= indexmin_z && ip->St[is].s.Sz <= indexmax_z)
         {
-            this->shot.push_back({temp_x - indexmin_x, temp_z - indexmin_z});
+            this->shot.push_back({ip->St[is].s.Sx - indexmin_x, ip->St[is].s.Sz - indexmin_z});
         }
     }
 
@@ -226,9 +224,9 @@ void Partition::setRL(const IP *ip, const AFDPU2D *Pa)
 {
     this->RL_beginnum = 0;
     this->RL_endnum = 0;
-    for(uint is = 0; is < ip->ShotN; ++is)
-    {
-        for (uint m = 0; m < ip->St[is].rn; m++)
+//    for(uint is = 0; is < shot.size(); ++is)
+//    {
+        for (uint m = 0; m < ip->St[0].rn; m++)
         {
             int temp_x = Pa->PMLx + 1 * m;
             int temp_z = Pa->PMLz + 2;
@@ -239,7 +237,7 @@ void Partition::setRL(const IP *ip, const AFDPU2D *Pa)
                 this->rl.push_back({temp_x - this->indexmin_x, temp_z - this->indexmin_z});
             }
         }
-    }
+//    }
 }
 
 uint Partition::getRL_num() const

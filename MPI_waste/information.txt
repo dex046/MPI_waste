@@ -1,3 +1,139 @@
+=====================================================================
+shotN = 5
+        Calculating the observed data...
+        Calculating the observed data used:	203s
+
+        Doing the 0th iteration
+        Calculating the Gradient...
+        Objective function value:	514105
+        Step length:	426.005
+        The 0th iteration used 406s
+        Writing data to .sgy1
+
+=====================================================================
+shotN = 10
+        Calculating the observed data...
+        Calculating the observed data used:	312s
+
+        Doing the 0th iteration
+        Calculating the Gradient...
+        Objective function value:	2.17264e+06
+        Step length:	352.051
+        The 0th iteration used 788s
+        Writing data to .sgy1
+
+=====================================================================
+chuan xing
+TraceNum:  610
+SampleNum:  234
+TraceNum:  610
+SampleNum:  234
+
+********************************************************************************************
+Doing Time domain Full Waveform Inversion ...
+Parameters of Inversion are as follows:
+        Nx = 510
+        Nz = 134
+        dx = 10m
+        dz = 10m
+        Nt = 3000
+        dt = 0.001s
+        Npml = 50
+        f0 = 10
+        Nshot = 48
+        Iteration number = 1
+********************************************************************************************
+        Calculating the observed data...
+        Calculating the observed data used:	2574s
+
+        Doing the 0th iteration
+        Calculating the Gradient...
+
+        Objective function value:	3.19296e+06
+        Step length:	68.6615
+        The 0th iteration used 7091s
+        Writing data to .sgy
+
+=====================================================================
+********************************************************************************************
+Doing Time domain Full Waveform Inversion ...
+Parameters of Inversion are as follows:
+        Nx = 510
+        Nz = 134
+        dx = 10m
+        dz = 10m
+        Nt = 3000
+        dt = 0.001s
+        Npml = 50
+        f0 = 10
+        Nshot = 20
+        Iteration number = 1
+********************************************************************************************
+        Calculating the observed data...
+        Calculating the observed data used:	1078s
+
+        Doing the 0th iteration
+        Calculating the Gradient...
+
+        Objective function value:	1.1135e+06
+        Step length:	85.9763
+        The 0th iteration used 2957s
+        Writing data to .sgy
+
+=====================================================================
+********************************************************************************************
+Doing Time domain Full Waveform Inversion ...
+Parameters of Inversion are as follows:
+        Nx = 510
+        Nz = 134
+        dx = 10m
+        dz = 10m
+        Nt = 3000
+        dt = 0.001s
+        Npml = 50
+        f0 = 10
+        Nshot = 10
+        Iteration number = 1
+********************************************************************************************
+        Calculating the observed data...
+        Calculating the observed data used:	552s
+
+        Doing the 0th iteration
+        Calculating the Gradient...
+
+        Objective function value:	502203
+        Step length:	96.909
+        The 0th iteration used 1488s
+        Writing data to .sgy
+
+=====================================================================
+
+********************************************************************************************
+Doing Time domain Full Waveform Inversion ...
+Parameters of Inversion are as follows:
+        Nx = 510
+        Nz = 134
+        dx = 10m
+        dz = 10m
+        Nt = 3000
+        dt = 0.001s
+        Npml = 50
+        f0 = 10
+        Nshot = 5
+        Iteration number = 1
+********************************************************************************************
+        Calculating the observed data...
+        Calculating the observed data used:	276s
+
+        Doing the 0th iteration
+        Calculating the Gradient...
+        Objective function value:	229794
+        Step length:	101.817
+        The 0th iteration used 777s
+        Writing data to .sgy
+
+=====================================================================
+
 Z * X
 =====================================================================
 2 * 2
@@ -636,6 +772,7 @@ Z * X
         Writing data to .sgy1
 
 =====================================================================
+
 
 
 

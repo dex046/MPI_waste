@@ -39,7 +39,7 @@ int main()
 	IP *ip;
 	ip = new IP[1];
 	memset((void *)ip, 0, sizeof(IP));
-	ip->ShotN = 1;
+    ip->ShotN = 2;
 	ip->IterN = 1;
 	ip->Alpha = 0.0f;
 	ip->TrueVp = new float[nnz * nnx];	
@@ -57,7 +57,7 @@ int main()
 	for (uint is = 0; is < ip->ShotN; is++)
 	{
 		ip->St[is].rn = 510;
-		ip->St[is].s.Sx = Pa->PMLx + is * 10 + 200;
+        ip->St[is].s.Sx = Pa->PMLx + is * 10;
 		ip->St[is].s.Sz = Pa->PMLz + 2;
 		ip->St[is].re = new RL[ip->St[is].rn];
 		memset((void *)ip->St[is].re, 0, sizeof(RL) * ip->St[is].rn);
@@ -130,70 +130,70 @@ int main()
 	cout << "\tCalculating the observed data used:\t" << duration / CLOCKS_PER_SEC << "s" << endl;
 	
 	// 迭代过程中为了求取步长使用的试探步长
-	float e = 24.0f;
+    float e = 24.0f;
 
-	for (uint It = 0; It < ip->IterN; It++)
-	{
-		// 求取梯度
-		cout << "\n\tDoing the " << It << "th iteration" << endl;
-		cout << "\tCalculating the Gradient..." << endl;
-		begin = clock();
-		CalGrad(*Pa, ip, plan, sgs_t, sgs_c, sgs_r, It);
+    for (uint It = 0; It < ip->IterN; It++)
+    {
+        // 求取梯度
+        cout << "\n\tDoing the " << It << "th iteration" << endl;
+        cout << "\tCalculating the Gradient..." << endl;
+        begin = clock();
+        CalGrad(*Pa, ip, plan, sgs_t, sgs_c, sgs_r, It);
 		
-		// 梯度后处理
-		PostProcessGrad(*Pa, ip->GradVp, plan->h_Vp);
+        // 梯度后处理
+        PostProcessGrad(*Pa, ip->GradVp, plan->h_Vp);
 
-		// 求取步长 
-		CalStepLength(*Pa, ip, plan, sgs_t, sgs_c, e);
-		duration = clock() - begin;
+        // 求取步长
+        CalStepLength(*Pa, ip, plan, sgs_t, sgs_c, e);
+        duration = clock() - begin;
 
-		cout << "\tObjective function value:\t" << ip->ObjIter[It] << endl;
-		cout << "\tStep length:\t" << ip->Alpha << endl;
-		cout << "\tThe " << It << "th iteration used " << duration / CLOCKS_PER_SEC << "s" << endl;
+        cout << "\tObjective function value:\t" << ip->ObjIter[It] << endl;
+        cout << "\tStep length:\t" << ip->Alpha << endl;
+        cout << "\tThe " << It << "th iteration used " << duration / CLOCKS_PER_SEC << "s" << endl;
 
-		// 下一步迭代预处理
+        // 下一步迭代预处理
         PreProcess(*Pa, ip, plan);
-	}
-
-    ofstream fout0("RGradVp0.txt");
-    for(int i = 0; i < 67; ++i)
-    {
-        for(int j = 0; j < 255; ++j)
-        {
-            fout0 << *(ip->GradVp + i * Pa->Nx + j) << " ";
-        }
-        fout0 << endl;
     }
 
-    ofstream fout1("RGradVp1.txt");
-    for(int i = 0; i < 67; ++i)
-    {
-        for(int j = 255; j < 510; ++j)
-        {
-            fout1 << *(ip->GradVp + i * Pa->Nx + j) << " ";
-        }
-        fout1 << endl;
-    }
+//    ofstream fout0("RGradVp0.txt");
+//    for(int i = 0; i < 67; ++i)
+//    {
+//        for(int j = 0; j < 255; ++j)
+//        {
+//            fout0 << *(ip->GradVp + i * Pa->Nx + j) << " ";
+//        }
+//        fout0 << endl;
+//    }
 
-    ofstream fout2("RGradVp2.txt");
-    for(int i = 67; i < 134; ++i)
-    {
-        for(int j = 0; j < 255; ++j)
-        {
-            fout2 << *(ip->GradVp + i * Pa->Nx + j) << " ";
-        }
-        fout2 << endl;
-    }
+//    ofstream fout1("RGradVp1.txt");
+//    for(int i = 0; i < 67; ++i)
+//    {
+//        for(int j = 255; j < 510; ++j)
+//        {
+//            fout1 << *(ip->GradVp + i * Pa->Nx + j) << " ";
+//        }
+//        fout1 << endl;
+//    }
 
-    ofstream fout3("RGradVp3.txt");
-    for(int i = 67; i < 134; ++i)
-    {
-        for(int j = 255; j < 510; ++j)
-        {
-            fout3 << *(ip->GradVp + i * Pa->Nx + j) << " ";
-        }
-        fout3 << endl;
-    }
+//    ofstream fout2("RGradVp2.txt");
+//    for(int i = 67; i < 134; ++i)
+//    {
+//        for(int j = 0; j < 255; ++j)
+//        {
+//            fout2 << *(ip->GradVp + i * Pa->Nx + j) << " ";
+//        }
+//        fout2 << endl;
+//    }
+
+//    ofstream fout3("RGradVp3.txt");
+//    for(int i = 67; i < 134; ++i)
+//    {
+//        for(int j = 255; j < 510; ++j)
+//        {
+//            fout3 << *(ip->GradVp + i * Pa->Nx + j) << " ";
+//        }
+//        fout3 << endl;
+//    }
 
     ofstream fout4("RCurrVp0.txt", ios_base::out | ios_base::trunc);
     for(int i = 0; i < 117; ++i)
@@ -235,18 +235,18 @@ int main()
         fout7 << endl;
     }
 
-	cout << "\tWriting data to .sgy" << endl;
+    cout << "\tWriting data to .sgy" << endl;
 
-	char TrueSg[255];
-	char GradVp[255];
-	char InvertedVp[255];
-	sprintf(TrueSg, "TrueSG.sgy");
-	sprintf(GradVp, "GradientVp.sgy");
-	sprintf(InvertedVp, "InvertedVp.sgy");
+    char TrueSg[255];
+    char GradVp[255];
+    char InvertedVp[255];
+    sprintf(TrueSg, "TrueSG.sgy");
+    sprintf(GradVp, "GradientVp.sgy");
+    sprintf(InvertedVp, "InvertedVp.sgy");
 
-	WriteData(TrueSg, (usht)Pa->Nt, (usht)ip->St[0].rn, (usht)(Pa->dt * 1000000), sgs_t, 1);
-	WriteData(GradVp, Pa->Nz, Pa->Nx, Pa->dz * 1000, ip->GradVp, 0);
-	WriteData(InvertedVp, nnz, nnx, Pa->dz * 1000, ip->CurrVp, 0);
+    WriteData(TrueSg, (usht)Pa->Nt, (usht)ip->St[0].rn, (usht)(Pa->dt * 1000000), sgs_t, 1);
+    WriteData(GradVp, Pa->Nz, Pa->Nx, Pa->dz * 1000, ip->GradVp, 0);
+    WriteData(InvertedVp, nnz, nnx, Pa->dz * 1000, ip->CurrVp, 0);
 
 	return 0;
 }
