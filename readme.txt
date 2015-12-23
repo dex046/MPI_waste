@@ -21,3 +21,6 @@ Parameters of Inversion are as follows:
 	Step length:	152.931
 	The 0th iteration used 174s
 	Writing data to .sgy
+
+
+zheshi duo pao
