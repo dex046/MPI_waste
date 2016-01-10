@@ -40,7 +40,7 @@ int main()
 	ip = new IP[1];
 	memset((void *)ip, 0, sizeof(IP));
     ip->ShotN = 2;
-	ip->IterN = 1;
+    ip->IterN = 2;
 	ip->Alpha = 0.0f;
 	ip->TrueVp = new float[nnz * nnx];	
 	memset((void *)ip->TrueVp, 0, sizeof(float) * nnz * nnx);

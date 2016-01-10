@@ -24,11 +24,16 @@
 #define STEP_MAX_RL 19
 #define STEP_MIN_RL 20
 
-//#define UpdateVpPML 3
-void dataTransport(float *data, const Partition& pt, int tag, int it);
-void dataTransport_Vp(float *data, const Partition& pt, int tag, const AFDPU2D &Pa);
+#define STEP_SUMRESTRIAL 21
+#define STEP_SUMRESCURR 22
 
-void dataGather(float *data, const Partition& pt, int tag);
+#define STEP_GRAD 23
+
+//#define UpdateVpPML 3
+void dataTransport(float *data, const Partition& pt, int tag, int it, const MPI_Comm& mycomm);
+void dataTransport_Vp(float *data, const Partition& pt, int tag, const AFDPU2D &Pa, const MPI_Comm &mycomm);
+
+void dataGather(float *data, const Partition& pt, int tag, const MPI_Comm &mycomm);
 
 void copydatatobuf(float *data, float *buf, const Partition& pt, uint transportlen_side, int tag, int flag);
 void copydatatobuf_Vp(float *data, float *buf, const Partition& pt, uint transportlen_side, int flag, const AFDPU2D &Pa);

@@ -1,4 +1,148 @@
 =====================================================================
+pao bing xing
+=====================================================================
+8
+(2 * 2) * 2
+********************************************************************************************
+Doing Time domain Full Waveform Inversion ...
+Parameters of Inversion are as follows:
+        Nx = 510
+        Nz = 134
+        dx = 10m
+        dz = 10m
+        Nt = 3000
+        dt = 0.001s
+        Npml = 50
+        f0 = 10
+        Nshot = 2
+        Iteration number = 1
+********************************************************************************************
+        Calculating the observed data...
+        Calculating the observed data used:	41s
+
+        Doing the 0th iteration
+        Calculating the Gradient...
+
+        Objective function value:	90728.5
+        Step length:	121.461
+        The 0th iteration used 138s
+        Writing data to .sgy1
+=====================================================================
+16
+(2 * 4) * 2
+********************************************************************************************
+Doing Time domain Full Waveform Inversion ...
+Parameters of Inversion are as follows:
+        Nx = 510
+        Nz = 134
+        dx = 10m
+        dz = 10m
+        Nt = 3000
+        dt = 0.001s
+        Npml = 50
+        f0 = 10
+        Nshot = 2
+        Iteration number = 1
+********************************************************************************************
+        Calculating the observed data...
+        Calculating the observed data used:	26s
+
+        Doing the 0th iteration
+        Calculating the Gradient...
+
+        Objective function value:	90728.5
+        Step length:	121.461
+        The 0th iteration used 83s
+        Writing data to .sgy1
+
+=====================================================================
+32
+(4 * 4) * 2
+********************************************************************************************
+Doing Time domain Full Waveform Inversion ...
+Parameters of Inversion are as follows:
+        Nx = 510
+        Nz = 134
+        dx = 10m
+        dz = 10m
+        Nt = 3000
+        dt = 0.001s
+        Npml = 50
+        f0 = 10
+        Nshot = 2
+        Iteration number = 1
+********************************************************************************************
+        Calculating the observed data...
+        Calculating the observed data used:	17s
+
+        Doing the 0th iteration
+        Calculating the Gradient...
+
+        Objective function value:	90728.5
+        Step length:	121.461
+        The 0th iteration used 51s
+        Writing data to .sgy1
+
+=====================================================================
+64
+(4 * 8) * 2
+********************************************************************************************
+Doing Time domain Full Waveform Inversion ...
+Parameters of Inversion are as follows:
+        Nx = 510
+        Nz = 134
+        dx = 10m
+        dz = 10m
+        Nt = 3000
+        dt = 0.001s
+        Npml = 50
+        f0 = 10
+        Nshot = 2
+        Iteration number = 1
+********************************************************************************************
+        Calculating the observed data...
+        Calculating the observed data used:	10s
+
+        Doing the 0th iteration
+        Calculating the Gradient...
+
+        Objective function value:	90728.5
+        Step length:	121.461
+        The 0th iteration used 31s
+        Writing data to .sgy1
+
+=====================================================================
+128
+(8 * 8) * 2
+********************************************************************************************
+Doing Time domain Full Waveform Inversion ...
+Parameters of Inversion are as follows:
+        Nx = 510
+        Nz = 134
+        dx = 10m
+        dz = 10m
+        Nt = 3000
+        dt = 0.001s
+        Npml = 50
+        f0 = 10
+        Nshot = 2
+        Iteration number = 1
+********************************************************************************************
+        Calculating the observed data...
+        Calculating the observed data used:	7s
+
+        Doing the 0th iteration
+        Calculating the Gradient...
+
+        Objective function value:	90728.5
+        Step length:	115.766
+        The 0th iteration used 20s
+        Writing data to .sgy1
+
+=====================================================================
+=====================================================================
+=====================================================================
+=====================================================================
 shotN = 5
         Calculating the observed data...
         Calculating the observed data used:	203s
@@ -38,154 +182,11 @@ Parameters of Inversion are as follows:
 	Iteration number = 1
 ********************************************************************************************
 	Calculating the observed data...
-0 CalTrueWF
-0 size 0
-1 CalTrueWF
-1 size 765000
-2 CalTrueWF
-2 size 1530000
-3 CalTrueWF
-3 size 2295000
-4 CalTrueWF
-4 size 3060000
-5 CalTrueWF
-5 size 3825000
-6 CalTrueWF
-6 size 4590000
-7 CalTrueWF
-7 size 5355000
-8 CalTrueWF
-8 size 6120000
-9 CalTrueWF
-9 size 6885000
-10 CalTrueWF
-10 size 7650000
-11 CalTrueWF
-11 size 8415000
-12 CalTrueWF
-12 size 9180000
-13 CalTrueWF
-13 size 9945000
-14 CalTrueWF
-14 size 10710000
-15 CalTrueWF
-15 size 11475000
-16 CalTrueWF
-16 size 12240000
-17 CalTrueWF
-17 size 13005000
-18 CalTrueWF
-18 size 13770000
-19 CalTrueWF
-19 size 14535000
-20 CalTrueWF
-20 size 15300000
-21 CalTrueWF
-21 size 16065000
-22 CalTrueWF
-22 size 16830000
-23 CalTrueWF
-23 size 17595000
-24 CalTrueWF
-24 size 18360000
-25 CalTrueWF
-25 size 19125000
-26 CalTrueWF
-26 size 19890000
-27 CalTrueWF
-27 size 20655000
-28 CalTrueWF
-28 size 21420000
-29 CalTrueWF
-29 size 22185000
-30 CalTrueWF
-30 size 22950000
-31 CalTrueWF
-31 size 23715000
-32 CalTrueWF
-32 size 24480000
-33 CalTrueWF
-33 size 25245000
-34 CalTrueWF
-34 size 26010000
-35 CalTrueWF
-35 size 26775000
-36 CalTrueWF
-36 size 27540000
-37 CalTrueWF
-37 size 28305000
-38 CalTrueWF
-38 size 29070000
-39 CalTrueWF
-39 size 29835000
-40 CalTrueWF
-40 size 30600000
-41 CalTrueWF
-41 size 31365000
-42 CalTrueWF
-42 size 32130000
-43 CalTrueWF
-43 size 32895000
-44 CalTrueWF
-44 size 33660000
-45 CalTrueWF
-45 size 34425000
-46 CalTrueWF
-46 size 35190000
-47 CalTrueWF
-47 size 35955000
 	Calculating the observed data used:	1377s
 
 	Doing the 0th iteration
 	Calculating the Gradient...
-0 45263.4
-1 90638.9
-2 136052
-3 182187
-4 229794
-5 279330
-6 331358
-7 385959
-8 442557
-9 502203
-10 563860
-11 628371
-12 695935
-13 762571
-14 827128
-15 889222
-16 948733
-17 1.00513e+06
-18 1.0588e+06
-19 1.1135e+06
-20 1.17036e+06
-21 1.22996e+06
-22 1.29313e+06
-23 1.3601e+06
-24 1.42649e+06
-25 1.4937e+06
-26 1.56438e+06
-27 1.64102e+06
-28 1.71682e+06
-29 1.79632e+06
-30 1.8825e+06
-31 1.97397e+06
-32 2.06489e+06
-33 2.15137e+06
-34 2.23423e+06
-35 2.32371e+06
-36 2.43031e+06
-37 2.53557e+06
-38 2.63011e+06
-39 2.7107e+06
-40 2.78269e+06
-41 2.84936e+06
-42 2.9102e+06
-43 2.96495e+06
-44 3.01814e+06
-45 3.07658e+06
-46 3.13675e+06
-47 3.19296e+06
+
 	Objective function value:	3.19296e+06
 	Step length:	68.6615
 	The 0th iteration used 3576s

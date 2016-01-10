@@ -1314,8 +1314,10 @@ void CalTrueWF(AFDPU2D Pa,
 	// 给速度赋值
     memset((void *)plan->h_Vp,			0,	sizeof(float) * nnz * nnx);// h_Vp 正演中使用的速度
     memcpy(plan->h_Vp,	ip->TrueVp,	 nnz * nnx * sizeof(float));
-//        for(int i = 0; i < nnz * nnx; ++i)
-//            cout << *(ip->TrueVp + i);
+
+    ofstream fout("ip->TrueVp.txt");
+    for(int i = 0; i < nnz * nnx; ++i)
+        fout << *(ip->TrueVp + i) << " ";
     for (uint is = 0; is < ip->ShotN; is++)// 反演中的炮数
 	{
         cout << "CalTrueWF " << is << endl;
@@ -1427,22 +1429,22 @@ void CalTrueWF(AFDPU2D Pa,
 
         if(is == 0)
         {
-            ofstream fout2("sgs_t2.txt");
-            ofstream fout3("sgs_t3.txt");
-            for(int is = 0; is < ip->ShotN; ++is)
-            {
-                for(int i = 255; i < 510; ++i)
+            ofstream fout2("sgs_t00.txt");
+            ofstream fout3("sgs_t01.txt");
+//            for(int is = 0; is < ip->ShotN; ++is)
+//            {
+                for(int i = 0; i < 255; ++i)
                 {
                     for(int j = 0; j < Pa.Nt; ++j)
                         fout2 << *(sgs_t + is * 510 * Pa.Nt + i * Pa.Nt + j) << " ";
                     //
                 }
                 fout2 << endl;
-            }
+//            }
 
 
-            for(int is = 0; is < ip->ShotN; ++is)
-            {
+//            for(int is = 0; is < ip->ShotN; ++is)
+//            {
                 for(int i = 255; i < 510; ++i)
                 {
                     for(int j = 0; j < Pa.Nt; ++j)
@@ -1450,7 +1452,42 @@ void CalTrueWF(AFDPU2D Pa,
                     //
                 }
                 fout3 << endl;
-            }
+//            }
+
+
+            fout2.flush();
+            fout3.flush();
+
+
+            fout2.close();
+            fout3.close();
+        }
+        else
+        {
+            ofstream fout2("sgs_t10.txt");
+            ofstream fout3("sgs_t11.txt");
+//            for(int is = 0; is < ip->ShotN; ++is)
+//            {
+                for(int i = 0; i < 255; ++i)
+                {
+                    for(int j = 0; j < Pa.Nt; ++j)
+                        fout2 << *(sgs_t + is * 510 * Pa.Nt + i * Pa.Nt + j) << " ";
+                    //
+                }
+                fout2 << endl;
+//            }
+
+
+//            for(int is = 0; is < ip->ShotN; ++is)
+//            {
+                for(int i = 255; i < 510; ++i)
+                {
+                    for(int j = 0; j < Pa.Nt; ++j)
+                        fout3 << *(sgs_t + is * 510 * Pa.Nt + i * Pa.Nt + j) << " ";
+                    //
+                }
+                fout3 << endl;
+//            }
 
 
             fout2.flush();
@@ -1461,37 +1498,37 @@ void CalTrueWF(AFDPU2D Pa,
             fout3.close();
         }
 	}
-    ofstream fout("sgs_t0.txt");
-    ofstream fout1("sgs_t1.txt");
+//    ofstream fout("sgs_t0.txt");
+//    ofstream fout1("sgs_t1.txt");
 
-    for(int is = 0; is < ip->ShotN; ++is)
-    {
-        for(int i = 0; i < 255; ++i)
-        {
-            for(int j = 0; j < Pa.Nt; ++j)
-                fout << *(sgs_t + is * 510 * Pa.Nt + i * Pa.Nt + j) << " ";
-            //
-        }
+//    for(int is = 0; is < ip->ShotN; ++is)
+//    {
+//        for(int i = 0; i < 255; ++i)
+//        {
+//            for(int j = 0; j < Pa.Nt; ++j)
+//                fout << *(sgs_t + is * 510 * Pa.Nt + i * Pa.Nt + j) << " ";
+//            //
+//        }
 
-    }
-    fout << endl;
+//    }
+//    fout << endl;
 
-    for(int is = 0; is < ip->ShotN; ++is)
-    {
-        for(int i = 255; i < 510; ++i)
-        {
-            for(int j = 0; j < Pa.Nt; ++j)
-                fout1 << *(sgs_t + is * 510 * Pa.Nt + i * Pa.Nt + j) << " ";
-            //
-        }
+//    for(int is = 0; is < ip->ShotN; ++is)
+//    {
+//        for(int i = 255; i < 510; ++i)
+//        {
+//            for(int j = 0; j < Pa.Nt; ++j)
+//                fout1 << *(sgs_t + is * 510 * Pa.Nt + i * Pa.Nt + j) << " ";
+//            //
+//        }
 
-    }
-    fout1 << endl;
+//    }
+//    fout1 << endl;
 
-    fout.flush();
-    fout1.flush();
-    fout.close();
-    fout1.close();
+//    fout.flush();
+//    fout1.flush();
+//    fout.close();
+//    fout1.close();
 }
 
 /*------------------------------------------------------------------------
@@ -1843,7 +1880,7 @@ void CalStepLength(AFDPU2D Pa,
 		}
 	}
 
-    cout << MaxValue << endl;
+    cout << "max=" << MaxValue << endl;
 
 	// 生成试探个体
 	memset((void *)plan->h_Grad, 0, sizeof(float) * Pa.Nz * Pa.Nx);

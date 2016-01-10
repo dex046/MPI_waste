@@ -228,7 +228,7 @@ void copybuftodata(float *buf, float *data, const Partition& pt, uint transportl
         }
     }
 }
-void dataGather(float *data, const Partition& pt, int tag)
+void dataGather(float *data, const Partition& pt, int tag, const MPI_Comm& mycomm)
 {
     H_Border temph_U = pt.geth_U();
     H_Border temph_VW = pt.geth_VW();
@@ -279,7 +279,7 @@ void dataGather(float *data, const Partition& pt, int tag)
     {
         length = topborder * block_x;
         float *buf = new float[length];
-        MPI_Recv(buf, length, MPI_FLOAT, MPI_ANY_SOURCE, tag + TOP_TO_BOTTOM, MPI_COMM_WORLD, &status);
+        MPI_Recv(buf, length, MPI_FLOAT, MPI_ANY_SOURCE, tag + TOP_TO_BOTTOM, mycomm, &status);
 
 //        for(int i = 0; i < length; ++i)
 //            cout << *(buf + i);
@@ -295,7 +295,7 @@ void dataGather(float *data, const Partition& pt, int tag)
 
         length = leftborder * block_z;
         float *buf = new float[length];
-        MPI_Recv(buf, length, MPI_FLOAT, MPI_ANY_SOURCE, tag + LEFT_TO_RIGHT, MPI_COMM_WORLD, &status);
+        MPI_Recv(buf, length, MPI_FLOAT, MPI_ANY_SOURCE, tag + LEFT_TO_RIGHT, mycomm, &status);
 
         transportlen_side = leftborder;
         copybuftodata(buf, data, pt, transportlen_side, tag, LEFT_TO_RIGHT);
@@ -307,7 +307,7 @@ void dataGather(float *data, const Partition& pt, int tag)
     {
         length = bottomborder * block_x;
         float *buf = new float[length];
-        MPI_Recv(buf, length, MPI_FLOAT, MPI_ANY_SOURCE, tag + BOTTOM_TO_TOP, MPI_COMM_WORLD, &status);
+        MPI_Recv(buf, length, MPI_FLOAT, MPI_ANY_SOURCE, tag + BOTTOM_TO_TOP, mycomm, &status);
         transportlen_side = bottomborder;
         copybuftodata(buf, data, pt, transportlen_side, tag, BOTTOM_TO_TOP);
 
@@ -318,7 +318,7 @@ void dataGather(float *data, const Partition& pt, int tag)
     {
         length = rightborder * block_z;
         float *buf = new float[length];
-        MPI_Recv(buf, length, MPI_FLOAT, MPI_ANY_SOURCE, tag + RIGHT_TO_LEFT, MPI_COMM_WORLD, &status);
+        MPI_Recv(buf, length, MPI_FLOAT, MPI_ANY_SOURCE, tag + RIGHT_TO_LEFT, mycomm, &status);
         transportlen_side = rightborder;
         copybuftodata(buf, data, pt, transportlen_side, tag, RIGHT_TO_LEFT);
 
@@ -327,7 +327,7 @@ void dataGather(float *data, const Partition& pt, int tag)
 }
 
 
-void dataTransport(float *data, const Partition& pt, int tag, int it)
+void dataTransport(float *data, const Partition& pt, int tag, int it, const MPI_Comm &mycomm)
 {
 
     H_Border temph_U = pt.geth_U();
@@ -335,8 +335,11 @@ void dataTransport(float *data, const Partition& pt, int tag, int it)
     H_Border temph_Vp = pt.geth_Vp();
 
     MPI_Status status;
-    uint pos_x = pt.getblockPosition_x();
-    uint pos_z = pt.getblockPosition_z();
+
+    uint pos_x = pt.get_in_blockPosition_x();
+    uint pos_z = pt.get_in_blockPosition_z();
+
+    int rank = pt.getrank();
 
     uint block_x = pt.getblockLength_x();
     uint block_z = pt.getblockLength_z();
@@ -377,20 +380,21 @@ void dataTransport(float *data, const Partition& pt, int tag, int it)
 
 
 
+    //cout << "RRR" << rank << endl;
     if(pos_z % 2)
     {
-        if(!pt.islastblock_z())
+        if(!pt.in_islastblock_z())
         {
             //cout << pt.getrank() + pt.getsumBlock_x() << "www" << pt.getrank() << endl;
             uint transportlength_z = topborder;
             length = transportlength_z * block_x;
             float *buf = new float[length];
             copydatatobuf(data, buf, pt, transportlength_z, tag, TOP_TO_BOTTOM);
-            MPI_Send(buf, length, MPI_FLOAT, pt.getrank() + pt.getsumBlock_x(), tag + TOP_TO_BOTTOM, MPI_COMM_WORLD);
+            MPI_Send(buf, length, MPI_FLOAT, pt.get_in_rank() + pt.get_in_sumBlock_x(), tag + TOP_TO_BOTTOM, mycomm);
 
             delete[] buf;
         }
-        if(!pt.isfirstblock_z())
+        if(!pt.in_isfirstblock_z())
         {
             uint transportlength_z = bottomborder;
             length = transportlength_z * block_x;
@@ -401,16 +405,16 @@ void dataTransport(float *data, const Partition& pt, int tag, int it)
 //                //cout << tag << endl;
 //            for(int i = 0; i < length; ++i)
 //                cout << *(buf + i) << " ";
-            MPI_Send(buf, length, MPI_FLOAT, pt.getrank() - pt.getsumBlock_x(), tag + BOTTOM_TO_TOP, MPI_COMM_WORLD);
+            MPI_Send(buf, length, MPI_FLOAT, pt.get_in_rank() - pt.get_in_sumBlock_x(), tag + BOTTOM_TO_TOP, mycomm);
 
             delete[] buf;
         }
         ///////////////////
-        if(!pt.isfirstblock_z())
+        if(!pt.in_isfirstblock_z())
         {
             length = topborder * block_x;
             float *buf = new float[length];
-            MPI_Recv(buf, length, MPI_FLOAT, MPI_ANY_SOURCE, tag + TOP_TO_BOTTOM, MPI_COMM_WORLD, &status);
+            MPI_Recv(buf, length, MPI_FLOAT, MPI_ANY_SOURCE, tag + TOP_TO_BOTTOM, mycomm, &status);
 
     //        for(int i = 0; i < length; ++i)
     //            cout << *(buf + i);
@@ -420,11 +424,11 @@ void dataTransport(float *data, const Partition& pt, int tag, int it)
 
             delete[] buf;
         }
-        if(!pt.islastblock_z())
+        if(!pt.in_islastblock_z())
         {
             length = bottomborder * block_x;
             float *buf = new float[length];
-            MPI_Recv(buf, length, MPI_FLOAT, MPI_ANY_SOURCE, tag + BOTTOM_TO_TOP, MPI_COMM_WORLD, &status);
+            MPI_Recv(buf, length, MPI_FLOAT, MPI_ANY_SOURCE, tag + BOTTOM_TO_TOP, mycomm, &status);
             transportlen_side = bottomborder;
             copybuftodata(buf, data, pt, transportlen_side, tag, BOTTOM_TO_TOP);
 
@@ -433,11 +437,11 @@ void dataTransport(float *data, const Partition& pt, int tag, int it)
     }
     else
     {
-        if(!pt.isfirstblock_z())
+        if(!pt.in_isfirstblock_z())
         {
             length = topborder * block_x;
             float *buf = new float[length];
-            MPI_Recv(buf, length, MPI_FLOAT, MPI_ANY_SOURCE, tag + TOP_TO_BOTTOM, MPI_COMM_WORLD, &status);
+            MPI_Recv(buf, length, MPI_FLOAT, MPI_ANY_SOURCE, tag + TOP_TO_BOTTOM, mycomm, &status);
 
     //        for(int i = 0; i < length; ++i)
     //            cout << *(buf + i);
@@ -447,13 +451,13 @@ void dataTransport(float *data, const Partition& pt, int tag, int it)
 
             delete[] buf;
         }
-        if(!pt.islastblock_z())
+        if(!pt.in_islastblock_z())
         {
 
 
             length = bottomborder * block_x;
             float *buf = new float[length];
-            MPI_Recv(buf, length, MPI_FLOAT, MPI_ANY_SOURCE, tag + BOTTOM_TO_TOP, MPI_COMM_WORLD, &status);
+            MPI_Recv(buf, length, MPI_FLOAT, MPI_ANY_SOURCE, tag + BOTTOM_TO_TOP, mycomm, &status);
             transportlen_side = bottomborder;
             copybuftodata(buf, data, pt, transportlen_side, tag, BOTTOM_TO_TOP);
 
@@ -467,24 +471,24 @@ void dataTransport(float *data, const Partition& pt, int tag, int it)
 
         }
         //////////////////
-        if(!pt.islastblock_z())
+        if(!pt.in_islastblock_z())
         {
             //cout << pt.getrank() + pt.getsumBlock_x() << "www" << pt.getrank() << endl;
             uint transportlength_z = topborder;
             length = transportlength_z * pt.getblockLength_x();
             float *buf = new float[length];
             copydatatobuf(data, buf, pt, transportlength_z, tag, TOP_TO_BOTTOM);
-            MPI_Send(buf, length, MPI_FLOAT, pt.getrank() + pt.getsumBlock_x(), tag + TOP_TO_BOTTOM, MPI_COMM_WORLD);
+            MPI_Send(buf, length, MPI_FLOAT, pt.get_in_rank() + pt.get_in_sumBlock_x(), tag + TOP_TO_BOTTOM, mycomm);
 
             delete[] buf;
         }
-        if(!pt.isfirstblock_z())
+        if(!pt.in_isfirstblock_z())
         {
             uint transportlength_z = bottomborder;
             length = transportlength_z * pt.getblockLength_x();
             float *buf = new float[length];
             copydatatobuf(data, buf, pt, transportlength_z, tag, BOTTOM_TO_TOP);
-            MPI_Send(buf, length, MPI_FLOAT, pt.getrank() - pt.getsumBlock_x(), tag + BOTTOM_TO_TOP, MPI_COMM_WORLD);
+            MPI_Send(buf, length, MPI_FLOAT, pt.get_in_rank() - pt.get_in_sumBlock_x(), tag + BOTTOM_TO_TOP, mycomm);
 
             delete[] buf;
         }
@@ -492,46 +496,46 @@ void dataTransport(float *data, const Partition& pt, int tag, int it)
 
     if(pos_x % 2)
     {
-        if(!pt.islastblock_x())
+        if(!pt.in_islastblock_x())
         {
-            //cout << "toright" << pt.getrank() << endl;
+
             uint transportlength_x = leftborder;
             length = transportlength_x * pt.getblockLength_z();
             float *buf = new float[length];
             copydatatobuf(data, buf, pt, transportlength_x, tag, LEFT_TO_RIGHT);
-            MPI_Send(buf, length, MPI_FLOAT, pt.getrank() + 1, tag + LEFT_TO_RIGHT, MPI_COMM_WORLD);
+            MPI_Send(buf, length, MPI_FLOAT, pt.get_in_rank() + 1, tag + LEFT_TO_RIGHT, mycomm);
 
             delete[] buf;
         }
-        if(!pt.isfirstblock_x())
+        if(!pt.in_isfirstblock_x())
         {
 
             uint transportlength_x = rightborder;
             length = transportlength_x * pt.getblockLength_z();
             float *buf = new float[length];
             copydatatobuf(data, buf, pt, transportlength_x, tag, RIGHT_TO_LEFT);
-            MPI_Send(buf, length, MPI_FLOAT, pt.getrank() - 1, tag + RIGHT_TO_LEFT, MPI_COMM_WORLD);
-
+            MPI_Send(buf, length, MPI_FLOAT, pt.get_in_rank() - 1, tag + RIGHT_TO_LEFT, mycomm);
+//cout << "RRR" << pt.get_in_rank() - 1 << endl;
             delete[] buf;
         }
 
 
-        if(!pt.islastblock_x())
+        if(!pt.in_islastblock_x())
         {
             length = rightborder * block_z;
             float *buf = new float[length];
-            MPI_Recv(buf, length, MPI_FLOAT, MPI_ANY_SOURCE, tag + RIGHT_TO_LEFT, MPI_COMM_WORLD, &status);
+            MPI_Recv(buf, length, MPI_FLOAT, MPI_ANY_SOURCE, tag + RIGHT_TO_LEFT, mycomm, &status);
             transportlen_side = rightborder;
             copybuftodata(buf, data, pt, transportlen_side, tag, RIGHT_TO_LEFT);
 
             delete[] buf;
         }
-        if(!pt.isfirstblock_x())
+        if(!pt.in_isfirstblock_x())
         {//cout << pt.getrank() << endl;
             length = leftborder * block_z;
             float *buf = new float[length];
-            MPI_Recv(buf, length, MPI_FLOAT, MPI_ANY_SOURCE, tag + LEFT_TO_RIGHT, MPI_COMM_WORLD, &status);
-
+            MPI_Recv(buf, length, MPI_FLOAT, MPI_ANY_SOURCE, tag + LEFT_TO_RIGHT, mycomm, &status);
+//cout << "www" << pt.get_in_rank() << endl;
 //            if(pt.getrank() == 1)
 //                for(int i = 0; i < length; ++i)
 //                    cout << *(buf + i);
@@ -547,21 +551,21 @@ void dataTransport(float *data, const Partition& pt, int tag, int it)
     }
     else
     {
-        if(!pt.islastblock_x())
+        if(!pt.in_islastblock_x())
         {
             length = rightborder * block_z;
             float *buf = new float[length];
-            MPI_Recv(buf, length, MPI_FLOAT, MPI_ANY_SOURCE, tag + RIGHT_TO_LEFT, MPI_COMM_WORLD, &status);
+            MPI_Recv(buf, length, MPI_FLOAT, MPI_ANY_SOURCE, tag + RIGHT_TO_LEFT, mycomm, &status);
             transportlen_side = rightborder;
             copybuftodata(buf, data, pt, transportlen_side, tag, RIGHT_TO_LEFT);
-
+//cout << "RRR" << pt.get_in_rank() + 1 << endl;
             delete[] buf;
         }
-        if(!pt.isfirstblock_x())
+        if(!pt.in_isfirstblock_x())
         {
             length = leftborder * block_z;
             float *buf = new float[length];
-            MPI_Recv(buf, length, MPI_FLOAT, MPI_ANY_SOURCE, tag + LEFT_TO_RIGHT, MPI_COMM_WORLD, &status);
+            MPI_Recv(buf, length, MPI_FLOAT, MPI_ANY_SOURCE, tag + LEFT_TO_RIGHT, mycomm, &status);
 
             transportlen_side = leftborder;
             copybuftodata(buf, data, pt, transportlen_side, tag, LEFT_TO_RIGHT);
@@ -570,25 +574,25 @@ void dataTransport(float *data, const Partition& pt, int tag, int it)
         }
 
 
-        if(!pt.islastblock_x())
+        if(!pt.in_islastblock_x())
         {
 
             uint transportlength_x = leftborder;
             length = transportlength_x * pt.getblockLength_z();
             float *buf = new float[length];
             copydatatobuf(data, buf, pt, transportlength_x, tag, LEFT_TO_RIGHT);
-            MPI_Send(buf, length, MPI_FLOAT, pt.getrank() + 1, tag + LEFT_TO_RIGHT, MPI_COMM_WORLD);
-
+            MPI_Send(buf, length, MPI_FLOAT, pt.get_in_rank() + 1, tag + LEFT_TO_RIGHT, mycomm);
+//cout << "SSS" << pt.get_in_rank() + 1 << endl;
             delete[] buf;
         }
-        if(!pt.isfirstblock_x())
+        if(!pt.in_isfirstblock_x())
         {
 
             uint transportlength_x = rightborder;
             length = transportlength_x * pt.getblockLength_z();
             float *buf = new float[length];
-            copydatatobuf(data, buf, pt, transportlength_x, tag, RIGHT_TO_LEFT);
-            MPI_Send(buf, length, MPI_FLOAT, pt.getrank() - 1, tag + RIGHT_TO_LEFT, MPI_COMM_WORLD);
+            copydatatobuf(data, buf, pt, transportlength_x, tag, RIGHT_TO_LEFT);//cout << "RRR" << pt.get_in_rank() << endl;
+            MPI_Send(buf, length, MPI_FLOAT, pt.get_in_rank() - 1, tag + RIGHT_TO_LEFT, mycomm);
 
             delete[] buf;
         }
@@ -640,13 +644,17 @@ void dataTransport(float *data, const Partition& pt, int tag, int it)
 }
 
 
-void dataTransport_Vp(float *data, const Partition& pt, int tag, const AFDPU2D &Pa)
+void dataTransport_Vp(float *data, const Partition& pt, int tag, const AFDPU2D &Pa, const MPI_Comm& mycomm)
 {
     uint rank = pt.getrank();
-    uint blockPosition_x = pt.getblockPosition_x();
-    uint blockPosition_z = pt.getblockPosition_z();
-    uint sumBlock_x = pt.getsumBlock_x();
-    uint sumBlock_z = pt.getsumBlock_z();
+    uint in_rank = pt.get_in_rank();
+
+    uint blockPosition_x = pt.get_in_blockPosition_x();
+    uint blockPosition_z = pt.get_in_blockPosition_z();
+
+    uint sumBlock_x = pt.get_in_sumBlock_x();
+    uint sumBlock_z = pt.get_in_sumBlock_z();
+
     uint block_x = pt.getblockLength_x();
     uint block_z = pt.getblockLength_z();
     //cout << rank << endl;
@@ -664,7 +672,7 @@ void dataTransport_Vp(float *data, const Partition& pt, int tag, const AFDPU2D &
             uint length = 1 * block_z;
             float *buf = new float[length];
             copydatatobuf_Vp(data, buf, pt, transportlength_z, RIGHT_TO_LEFT, Pa);
-            MPI_Send(buf, length, MPI_FLOAT, rank - i, STEP_VP + RIGHT_TO_LEFT, MPI_COMM_WORLD);
+            MPI_Send(buf, length, MPI_FLOAT, in_rank - i, STEP_VP + RIGHT_TO_LEFT, mycomm);
 
             delete[] buf;
         }
@@ -676,7 +684,7 @@ void dataTransport_Vp(float *data, const Partition& pt, int tag, const AFDPU2D &
             uint length = 1 * block_z;
             float *buf = new float[length];
             copydatatobuf_Vp(data, buf, pt, transportlength_z, LEFT_TO_RIGHT, Pa);
-            MPI_Send(buf, length, MPI_FLOAT, rank + i, STEP_VP + LEFT_TO_RIGHT, MPI_COMM_WORLD);
+            MPI_Send(buf, length, MPI_FLOAT, in_rank + i, STEP_VP + LEFT_TO_RIGHT, mycomm);
 
             delete[] buf;
         }
@@ -688,7 +696,7 @@ void dataTransport_Vp(float *data, const Partition& pt, int tag, const AFDPU2D &
             uint length = 1 * block_x;
             float *buf = new float[length];
             copydatatobuf_Vp(data, buf, pt, transportlength_z, BOTTOM_TO_TOP, Pa);
-            MPI_Send(buf, length, MPI_FLOAT, rank - (i * sumBlock_x), STEP_VP + BOTTOM_TO_TOP, MPI_COMM_WORLD);
+            MPI_Send(buf, length, MPI_FLOAT, in_rank - (i * sumBlock_x), STEP_VP + BOTTOM_TO_TOP, mycomm);
 
             delete[] buf;
         }
@@ -700,7 +708,7 @@ void dataTransport_Vp(float *data, const Partition& pt, int tag, const AFDPU2D &
             uint length = 1 * block_x;
             float *buf = new float[length];
             copydatatobuf_Vp(data, buf, pt, transportlength_z, TOP_TO_BOTTOM, Pa);
-            MPI_Send(buf, length, MPI_FLOAT, rank + (i * sumBlock_x), STEP_VP + TOP_TO_BOTTOM, MPI_COMM_WORLD);
+            MPI_Send(buf, length, MPI_FLOAT, in_rank + (i * sumBlock_x), STEP_VP + TOP_TO_BOTTOM, mycomm);
 
             delete[] buf;
         }

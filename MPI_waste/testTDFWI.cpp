@@ -115,6 +115,17 @@ void ReadData(char FileName[],
     ReadSgyData(FileName, trace, *Reel, SampleNum,
         DFormat, &BReel, &BIBM, pt);
 
+
+//    if(rank == 2)
+//    {
+//        for(n = 0; n < length_x; ++n)
+//        {
+//            for(m = 0; m < length_z; ++m)
+//            {
+//                cout << trace[n].data[m];
+//            }
+//        }
+//    }
     // write the trace data to Data
     for(n = 0; n < length_x; ++n)
     {
@@ -1868,7 +1879,7 @@ void CalTrueWF(AFDPU2D Pa,
             IP *ip,
             CPUVs *plan,
             float *sgs_t,
-            const Partition &pt)//plan  sgs_t
+            const Partition &pt, MPI_Comm &mycomm)//plan  sgs_t
 {
     uint block_x = pt.getblockLength_x();
     uint block_z = pt.getblockLength_z();
@@ -1883,11 +1894,12 @@ void CalTrueWF(AFDPU2D Pa,
     H_Border temph_U = pt.geth_U();
     H_Border h_VW = pt.geth_VW();
 
-    uint pos_x = pt.getblockPosition_x();
-    uint pos_z = pt.getblockPosition_z();
+    uint pos_x = pt.get_in_blockPosition_x();
+    uint pos_z = pt.get_in_blockPosition_z();
 
     float Wavelet = 0.0f;
 
+    int in_rank = pt.get_in_rank();
     int rank = pt.getrank();
 
     // 给速度赋值
@@ -1899,16 +1911,17 @@ void CalTrueWF(AFDPU2D Pa,
         memcpy(plan->h_Vp + (i + temph_Vp.topborder) * temph_Vp.length_x + temph_Vp.leftborder, ip->TrueVp + i * block_x, block_x * sizeof(float));
     }
     //cout << *(ip->TrueVp + (52 + temph_Vp.topborder)* temph_Vp.length_x +  260 + temph_Vp.leftborder);
-//    if(pt.getrank() == 1)
+//    if(pt.getrank() == 2)
 //        for(int i = 0; i < block_z * block_x; ++i)
 //        cout << *(plan->h_Vp + i);
     uint RL_num = pt.getRL_num();
 
 
-    for (uint is = 0; is < ip->ShotN; is++)// 反演中的炮数
-    {
+    uint is = rank % ip->ShotN;
+//    for (uint is = 0; is < ip->ShotN; is++)// 反演中的炮数
+//    {
         MPI_Barrier(MPI_COMM_WORLD);
-        if(rank == ROOT_ID)
+        if(in_rank == ROOT_ID)
             cout << is << " CalTrueWF" << endl;
 
         memset((void *)plan->h_PHIx_U_x,	0,	sizeof(float) * block_z * block_x);
@@ -1933,8 +1946,7 @@ void CalTrueWF(AFDPU2D Pa,
         // 对时间进行循环
         for (uint it = 0; it < Pa.Nt; it++)// Pa.Nt正演的时间步数
         {
-//            if(pt.getrank() == 1)
-//                cout <<it << endl;
+
 //            if(it == 32)
 //            {
 //                //cout << pt.getindexmin_z() << endl;
@@ -1959,7 +1971,9 @@ void CalTrueWF(AFDPU2D Pa,
             }
 //if(rank == ROOT_ID)
 //    cout << it << endl;
-            dataTransport(plan->h_U_now, pt, STEP_U, it);//send data
+
+            dataTransport(plan->h_U_now, pt, STEP_U, it, mycomm);//send data
+
 //cout << pt.getrank() << endl;
 //            if(pos_z % 2)
 //            {
@@ -1975,7 +1989,7 @@ void CalTrueWF(AFDPU2D Pa,
 //            }
 
 
-           MPI_Barrier(MPI_COMM_WORLD);
+           //MPI_Barrier(MPI_COMM_WORLD);
 //            if(it == 50 && rank == 1)
 //            {
 //                //MPI_Barrier(MPI_COMM_WORLD);
@@ -2064,9 +2078,10 @@ void CalTrueWF(AFDPU2D Pa,
 //                            cout << i - h_VW.topborder << " " << j - h_VW.leftborder << " " << *(plan->h_W + i * h_VW.length_x + j) << endl;
 //            }
 
-            dataTransport(plan->h_V, pt, STEP_V, it);//send data
-            dataTransport(plan->h_W, pt, STEP_W, it);//send data
-
+            dataTransport(plan->h_V, pt, STEP_V, it, mycomm);//send data
+            dataTransport(plan->h_W, pt, STEP_W, it, mycomm);//send data
+//            if(pt.getrank() == 0)
+//                cout <<it << endl;
 //            if(rank % 2)
 //            {
 //                dataTransport(plan->h_V, pt, STEP_V);//send data
@@ -2082,7 +2097,7 @@ void CalTrueWF(AFDPU2D Pa,
 //                dataTransport(plan->h_W, pt, STEP_W);//send data
 //            }
 
-            MPI_Barrier(MPI_COMM_WORLD);
+            //MPI_Barrier(MPI_COMM_WORLD);
             // 一步更新V和W的卷积项
             StepPHIVW(Pa, plan->h_V, plan->h_W, plan->h_PHIx_V_x,
                 plan->h_PHIz_W_z, plan->h_Bx, plan->h_Bz, pt);//h_PHIx_V_x    h_PHIz_W_z ... h_V, h_W
@@ -2110,6 +2125,7 @@ void CalTrueWF(AFDPU2D Pa,
             //cout << "ppppppp" << rank << " " << pt.getShot_num() << endl;
             if(ip->St[is].s.Sx >= indexmin_x && ip->St[is].s.Sx <= indexmax_x && ip->St[is].s.Sz >= indexmin_z && ip->St[is].s.Sz <= indexmax_z)
             {
+                //cout << "rank=" << rank << endl;
                 AddSource(Pa, plan->h_U_next, Wavelet, plan->h_Vp, ip->St[is].s, pt);//h_U_next
             }
 //            if(it == Pa.Nt - 1 && pt.getrank() == 0)
@@ -2131,9 +2147,14 @@ void CalTrueWF(AFDPU2D Pa,
         {
             // 输出炮集
             memcpy(sgs_t + is * (Pa.Nt * RL_num), plan->h_TrueWF, Pa.Nt * RL_num * sizeof(float));/////?/\?
-            if(rank == ROOT_ID)
-                cout << is << " size " << is * (Pa.Nt * RL_num) << endl;
+//            if(in_rank == ROOT_ID)
+//                cout << is << " size " << is * (Pa.Nt * RL_num) << endl;
         }
+
+//        for(int i = 0; i < is * Pa.Nt * RL_num; ++i)
+//        {
+//            cout << sgs_t[i] << " ";
+//        }
 
 //        if(is == 0)
 //        {
@@ -2165,12 +2186,12 @@ void CalTrueWF(AFDPU2D Pa,
 //            }
 //        }
 
-    }
+    //}
 
 //    if(pt.getrank() == 0)
 //    {
-//        ofstream fout("sgs_t0.txt");
-//        for(int is = 0; is < ip->ShotN; ++is)
+//        ofstream fout("sgs_t00.txt");
+//        //for(int is = 0; is < ip->ShotN; ++is)
 //        for(int i = 0; i < RL_num; ++i)
 //        {
 //            for(int j = 0; j < Pa.Nt; ++j)
@@ -2183,8 +2204,35 @@ void CalTrueWF(AFDPU2D Pa,
 //    }
 //    if(pt.getrank() == 1)
 //    {
-//        ofstream fout("sgs_t1.txt");
-//        for(int is = 0; is < ip->ShotN; ++is)
+//        ofstream fout("sgs_t10.txt");
+//        //for(int is = 0; is < ip->ShotN; ++is)
+//        for(int i = 0; i < RL_num; ++i)
+//        {
+//            for(int j = 0; j < Pa.Nt; ++j)
+//                fout << *(sgs_t + is * RL_num * Pa.Nt + i * Pa.Nt + j) << " ";
+//        }
+//        fout << endl;
+//        fout.flush();
+//        fout.close();
+//    }
+//    if(pt.getrank() == 2)
+//    {
+//        ofstream fout("sgs_t01.txt");
+//        //for(int is = 0; is < ip->ShotN; ++is)
+//        for(int i = 0; i < RL_num; ++i)
+//        {
+//            for(int j = 0; j < Pa.Nt; ++j)
+//                fout << *(sgs_t + is * RL_num * Pa.Nt + i * Pa.Nt + j) << " ";
+//            //
+//        }
+//        fout << endl;
+//        fout.flush();
+//        fout.close();
+//    }
+//    if(pt.getrank() == 3)
+//    {
+//        ofstream fout("sgs_t11.txt");
+//        //for(int is = 0; is < ip->ShotN; ++is)
 //        for(int i = 0; i < RL_num; ++i)
 //        {
 //            for(int j = 0; j < Pa.Nt; ++j)
@@ -2217,7 +2265,7 @@ void CalGrad(AFDPU2D Pa,
             float *sgs_t,
             float *sgs_c,
             float *sgs_r,
-            uint It, const Partition &pt)
+            uint It, const Partition &pt, const MPI_Comm& mycomm)
 {
     uint block_x = pt.getblockLength_x();
     uint block_z = pt.getblockLength_z();
@@ -2241,7 +2289,10 @@ void CalGrad(AFDPU2D Pa,
     float Wavelet = 0.0f;
 
     int rank = pt.getrank();
+    int in_rank = pt.get_in_rank();
+
     int rank_size = pt.getsize();
+    int in_rank_size = pt.get_in_size();
 
     uint RecNum = pt.geth_Coord_length();
 
@@ -2258,9 +2309,11 @@ void CalGrad(AFDPU2D Pa,
         memcpy(plan->h_Vp + (temph_Vp.topborder + i) * temph_Vp.length_x + temph_Vp.leftborder,	ip->CurrVp + i * block_x, sizeof(float) * block_x);
     }
 
+    uint is = rank % ip->ShotN;
+
     // 对炮进行循环
-    for (uint is = 0; is < ip->ShotN; is++)
-    {
+//    for (uint is = 0; is < ip->ShotN; is++)
+//    {
         memset((void *)plan->h_PHIx_U_x,	0,	sizeof(float) * block_z * block_x);
         memset((void *)plan->h_PHIz_U_z,	0,	sizeof(float) * block_z * block_x);
         memset((void *)plan->h_PHIx_V_x,	0,	sizeof(float) * block_z * block_x);
@@ -2312,9 +2365,9 @@ void CalGrad(AFDPU2D Pa,
                 memcpy(plan->h_U_now + (iz + temph_U.topborder) * temph_U.length_x + temph_U.leftborder, plan->h_U_next + iz * block_x, block_x * sizeof(float));
             }
 
-            dataTransport(plan->h_U_now, pt, STEP_U, it);//send data
+            dataTransport(plan->h_U_now, pt, STEP_U, it, mycomm);//send data
             //dataGather(plan->h_U_now, pt, STEP_U);//recv data
-
+//cout << "qqqq" << rank << endl;
             if(RL_num)
             {
                 // 一步记录炮集
@@ -2335,8 +2388,8 @@ void CalGrad(AFDPU2D Pa,
             StepVW(Pa, plan->h_U_now, plan->h_V, plan->h_W,
                 plan->h_PHIx_U_x, plan->h_PHIz_U_z, plan->h_Bx, plan->h_Bz, pt, it);//plan->h_V, plan->h_W
 
-            dataTransport(plan->h_V, pt, STEP_V, it);//send data
-            dataTransport(plan->h_W, pt, STEP_W, it);//send data
+            dataTransport(plan->h_V, pt, STEP_V, it, mycomm);//send data
+            dataTransport(plan->h_W, pt, STEP_W, it, mycomm);//send data
             //dataGather(plan->h_V, pt, STEP_V);//recv_v data
             //dataGather(plan->h_W, pt, STEP_W);//recv_w data
 
@@ -2464,7 +2517,7 @@ void CalGrad(AFDPU2D Pa,
 
                 }
 
-                dataTransport(plan->h_U_now, pt, STEP_U, it);//send data
+                dataTransport(plan->h_U_now, pt, STEP_U, it, mycomm);//send data
                 //dataGather(plan->h_U_now, pt, STEP_U);//recv data
 
                 // 逆时间更新V和W
@@ -2472,8 +2525,8 @@ void CalGrad(AFDPU2D Pa,
                     plan->h_PHIx_U_x, plan->h_PHIz_U_z, pt);
 
 
-                dataTransport(plan->h_V, pt, STEP_V, it);//send data
-                dataTransport(plan->h_W, pt, STEP_W, it);//send data
+                dataTransport(plan->h_V, pt, STEP_V, it, mycomm);//send data
+                dataTransport(plan->h_W, pt, STEP_W, it, mycomm);//send data
                 //MPI_Wait(&request_send_V, &status_send);
                 //MPI_Wait(&request_send_W, &status_send);
                 //dataGather(plan->h_W, pt, STEP_W);//recv_w data
@@ -2508,8 +2561,8 @@ void CalGrad(AFDPU2D Pa,
                 memcpy(plan->h_U_now_r + (iz + temph_U.topborder) * temph_U.length_x + temph_U.leftborder, plan->h_U_next_r + iz * block_x, block_x * sizeof(float));
             }
 
-            dataTransport(plan->h_U_now_r, pt, STEP_U, it);//send data
-            MPI_Barrier(MPI_COMM_WORLD);
+            dataTransport(plan->h_U_now_r, pt, STEP_U, it, mycomm);//send data
+            //MPI_Barrier(MPI_COMM_WORLD);
             //dataGather(plan->h_U_now, pt, STEP_U);//recv data
 
 
@@ -2518,6 +2571,7 @@ void CalGrad(AFDPU2D Pa,
             {
                 // 一步求取梯度
                 StepCalGrad(Pa, plan->h_Grad, plan->h_U_Der, plan->h_U_now_r, pt);//plan->h_Grad
+
 
             }
 
@@ -2529,8 +2583,8 @@ void CalGrad(AFDPU2D Pa,
             StepVW(Pa, plan->h_U_now_r, plan->h_V_r, plan->h_W_r,
                 plan->h_PHIx_U_x_r, plan->h_PHIz_U_z_r, plan->h_Bx, plan->h_Bz, pt, it);
 
-            dataTransport(plan->h_V_r, pt, STEP_V, it);//send data
-            dataTransport(plan->h_W_r, pt, STEP_W, it);//send data
+            dataTransport(plan->h_V_r, pt, STEP_V, it, mycomm);//send data
+            dataTransport(plan->h_W_r, pt, STEP_W, it, mycomm);//send data
             //dataGather(plan->h_V, pt, STEP_V);//recv_v data
             //dataGather(plan->h_W, pt, STEP_W);//recv_w data
 
@@ -2538,7 +2592,7 @@ void CalGrad(AFDPU2D Pa,
             StepPHIVW(Pa, plan->h_V_r, plan->h_W_r, plan->h_PHIx_V_x_r,
                 plan->h_PHIz_W_z_r, plan->h_Bx, plan->h_Bz, pt);
 
-            MPI_Barrier(MPI_COMM_WORLD);
+            //MPI_Barrier(MPI_COMM_WORLD);
 //            if(rank == ROOT_ID && it == 1)
 //                cout << "qqqqqqqq" << it << endl;
 
@@ -2553,60 +2607,92 @@ void CalGrad(AFDPU2D Pa,
                 AddResidual(Pa, plan->h_ResWF, plan->h_U_next_r, it, plan->h_Vp, pt);
             }
         }
+        ////////////
 
+
+        float *temp_h_Grad = new float[interiorLength_x * interiorLength_z];
+        if(interiorLength_x && interiorLength_z)
+        {
+            if(is == 0)
+            {
+                for(int i = 0; i < ip->ShotN - 1; ++i)
+                {
+                    MPI_Recv(temp_h_Grad, interiorLength_z * interiorLength_x, MPI_FLOAT, MPI_ANY_SOURCE, STEP_GRAD, MPI_COMM_WORLD, &status_recv);
+                    for(int iz = 0; iz < interiorLength_z; ++iz)
+                    {
+                        for(int ix = 0; ix < interiorLength_x; ++ix)
+                        {
+                            //id1 = iz * interiorLength_x + ix;
+                            plan->h_Grad[iz * interiorLength_x + ix] += temp_h_Grad[iz * interiorLength_x + ix];
+                        }
+                    }
+                }
+
+                for(int i = 1; i < ip->ShotN; ++i)
+                {
+                    MPI_Send(plan->h_Grad, interiorLength_z * interiorLength_x, MPI_FLOAT, rank + i, STEP_GRAD, MPI_COMM_WORLD);
+                }
+            }
+            else
+            {
+                MPI_Send(plan->h_Grad, interiorLength_z * interiorLength_x, MPI_FLOAT, rank - (rank % ip->ShotN), STEP_GRAD, MPI_COMM_WORLD);
+                MPI_Recv(plan->h_Grad, interiorLength_z * interiorLength_x, MPI_FLOAT, rank - (rank % ip->ShotN), STEP_GRAD, MPI_COMM_WORLD, &status_recv);
+            }
+        }
+
+
+        ///////////
 //        MPI_Barrier(MPI_COMM_WORLD);
 //        //cout << "xxxxxxxxxx" << pt.getrank() << endl;
-//        cout << "ppppppp" << pt.getrank() << endl;
+        //cout << "ppppppp" << pt.getrank() << endl;
 
         //for(uint i = 0; i < RL)
 
-        uint indexmin_x = pt.getindexmin_x();
-        uint indexmax_x = pt.getindexmax_x();
-
-        int max_rank_RL = rank, min_rank_RL = rank;
+        int max_rank_RL = in_rank, min_rank_RL = in_rank;
 
         if(RL_num && indexmin_x <= Pa.PMLx && indexmax_x >= Pa.PMLx)
         {//cout << rank << endl;
-            min_rank_RL = rank;
+            min_rank_RL = in_rank;
             if(min_rank_RL != ROOT_ID)
-                MPI_Send(&min_rank_RL, 1, MPI_INT, ROOT_ID, STEP_MIN_RL, MPI_COMM_WORLD);
+                MPI_Send(&min_rank_RL, 1, MPI_INT, ROOT_ID, STEP_MIN_RL, mycomm);
             //cout << "AAAA" << min_rank_RL << " " << max_rank_RL << "AAAA" << endl;
         }
         if(RL_num && indexmin_x <= Pa.PMLx + ip->St[0].rn - 1 && indexmax_x >= Pa.PMLx + ip->St[0].rn - 1)
-        {
-            max_rank_RL = rank;
+        {//cout << rank << endl;
+            max_rank_RL = in_rank;
             if(max_rank_RL != ROOT_ID)
-                MPI_Send(&max_rank_RL, 1, MPI_INT, ROOT_ID, STEP_MAX_RL, MPI_COMM_WORLD);
+                MPI_Send(&max_rank_RL, 1, MPI_INT, ROOT_ID, STEP_MAX_RL, mycomm);
         }
-
-        if(rank == ROOT_ID)
+//cout << "test" << rank << endl;
+        if(in_rank == ROOT_ID)
         {
             if(!(RL_num && indexmin_x <= Pa.PMLx && indexmax_x >= Pa.PMLx))
-                MPI_Recv(&min_rank_RL, 1, MPI_INT, MPI_ANY_SOURCE, STEP_MIN_RL, MPI_COMM_WORLD, &status_recv);
+                MPI_Recv(&min_rank_RL, 1, MPI_INT, MPI_ANY_SOURCE, STEP_MIN_RL, mycomm, &status_recv);
             if(!(RL_num && indexmin_x <= Pa.PMLx + ip->St[0].rn - 1 && indexmax_x >= Pa.PMLx + ip->St[0].rn - 1))
-                MPI_Recv(&max_rank_RL, 1, MPI_INT, MPI_ANY_SOURCE, STEP_MAX_RL, MPI_COMM_WORLD, &status_recv);
+                MPI_Recv(&max_rank_RL, 1, MPI_INT, MPI_ANY_SOURCE, STEP_MAX_RL, mycomm, &status_recv);
         }
-        MPI_Barrier(MPI_COMM_WORLD);
-        MPI_Bcast(&max_rank_RL, 1, MPI_INT, ROOT_ID, MPI_COMM_WORLD);
-        MPI_Bcast(&min_rank_RL, 1, MPI_INT, ROOT_ID, MPI_COMM_WORLD);
 
-//cout << max_rank_RL << endl;
+        //MPI_Barrier(MPI_COMM_WORLD);
+        MPI_Bcast(&max_rank_RL, 1, MPI_INT, ROOT_ID, mycomm);
+        MPI_Bcast(&min_rank_RL, 1, MPI_INT, ROOT_ID, mycomm);
+
+//cout << "max_RL" << max_rank_RL << endl;
         float *buf_obj = new float[1];
         // 求取目标函数
         if(RL_num)
         {
-            if(rank != min_rank_RL)
+            if(in_rank != min_rank_RL)
             {
-                MPI_Recv(buf_obj, 1, MPI_FLOAT, rank - 1, STEP_OBJ, MPI_COMM_WORLD, &status_recv);
+                MPI_Recv(buf_obj, 1, MPI_FLOAT, in_rank - 1, STEP_OBJ, mycomm, &status_recv);
                 ip->ObjIter[It] = *buf_obj;
                 for (uint m = 0; m < RL_num * Pa.Nt; m++)
                 {
                     //cout << *ip->ObjIter << endl;
                     ip->ObjIter[It] += 0.5f * powf(plan->h_ResWF[m], 2.0f);//ci shi It = 0// zhe li suan de zhi shi jubu de han shu
                 }
-                if(rank != max_rank_RL)
+                if(in_rank != max_rank_RL)
                 {
-                    MPI_Send(&ip->ObjIter[It], 1, MPI_FLOAT, rank + 1, STEP_OBJ, MPI_COMM_WORLD);
+                    MPI_Send(&ip->ObjIter[It], 1, MPI_FLOAT, in_rank + 1, STEP_OBJ, mycomm);
                 }
             }
             else
@@ -2616,10 +2702,36 @@ void CalGrad(AFDPU2D Pa,
                     //cout << *ip->ObjIter << endl;
                     ip->ObjIter[It] += 0.5f * powf(plan->h_ResWF[m], 2.0f);//ci shi It = 0// zhe li suan de zhi shi jubu de han shu
                 }
-                MPI_Send(&ip->ObjIter[It], 1, MPI_FLOAT, rank + 1, STEP_OBJ, MPI_COMM_WORLD);
+                cout << "rank=" << rank << " " << ip->ObjIter[It] << endl;
+                if(in_rank != max_rank_RL)
+                    MPI_Send(&ip->ObjIter[It], 1, MPI_FLOAT, in_rank + 1, STEP_OBJ, mycomm);
             }
         }
 
+        MPI_Bcast(&ip->ObjIter[It], 1, MPI_FLOAT, max_rank_RL, mycomm);
+
+//cout << "zzz" << rank << endl;
+        if(in_rank == ROOT_ID)
+        {
+            if(rank != ROOT_ID)
+            {
+                //cout << "zzz" << rank << endl;
+                MPI_Send(&ip->ObjIter[It], 1, MPI_FLOAT, ROOT_ID, STEP_OBJ, MPI_COMM_WORLD);
+            }
+            else
+            {
+                for(int i = 1; i < ip->ShotN; ++i)
+                {
+
+                    //cout << "ooooooooo" << ip->ObjIter[It] << endl;
+                    MPI_Recv(buf_obj, 1, MPI_FLOAT, MPI_ANY_SOURCE, STEP_OBJ, MPI_COMM_WORLD, &status_recv);
+                    //cout << "ooooooooo" << *buf_obj << endl;
+                    ip->ObjIter[It] += *buf_obj;
+                    //cout << "ooooooooo" << ip->ObjIter[It] << endl;
+                }
+            }
+        }
+//cout << "test" << rank << endl;
         delete buf_obj;
 
 //        if(rank >= min_rank_RL && rank <= max_rank_RL)
@@ -2640,20 +2752,25 @@ void CalGrad(AFDPU2D Pa,
 //            }
 //        }
 
-        MPI_Barrier(MPI_COMM_WORLD);
+        //MPI_Barrier(MPI_COMM_WORLD);
 //        if(rank == max_rank_RL)
 //        {
 //            cout << ip->ObjIter[It] << " "  << rank << endl;
 //        }
-        MPI_Bcast(&ip->ObjIter[It], 1, MPI_FLOAT, max_rank_RL, MPI_COMM_WORLD);
-
         MPI_Barrier(MPI_COMM_WORLD);
+        MPI_Bcast(&ip->ObjIter[It], 1, MPI_FLOAT, ROOT_ID, MPI_COMM_WORLD);
+
+        //MPI_Barrier(MPI_COMM_WORLD);
         if(rank == ROOT_ID)
         {
-            cout << is << " " << ip->ObjIter[It] << endl;
+            cout << "ObjIter=" << " " << ip->ObjIter[It] << endl;
         }
         //cout << "ppppppp" << pt.getrank() << endl;
-    }
+
+
+    //}//shotN
+
+
 
 //    ofstream fout("GradVp0.txt");
 //    if(rank == 0)
@@ -2734,7 +2851,7 @@ void CalStepLength(AFDPU2D Pa,
                 float *sgs_t,
                 float *sgs_c,
                 float e,
-                  const Partition &pt)
+                  const Partition &pt, const MPI_Comm& mycomm)
 {
     uint block_x = pt.getblockLength_x();
     uint block_z = pt.getblockLength_z();
@@ -2759,10 +2876,13 @@ void CalStepLength(AFDPU2D Pa,
     MPI_Status status_send, status_recv;
 
     int rank = pt.getrank();
+    int in_rank = pt.get_in_rank();
+
+    int rank_size = pt.getsize();
+    int in_rank_size = pt.get_in_size();
 
     uint sumblock_x = pt.getsumBlock_x();
     //uint sumblock_z = pt.getsumBlock_z();
-    uint rank_size = pt.getsize();
 
     uint RL_num = pt.getRL_num();
     if(RL_num)
@@ -2778,9 +2898,18 @@ void CalStepLength(AFDPU2D Pa,
 
     if(interiorLength_z && interiorLength_x)
     {
-        // 归一化梯度
         MaxValue = MatMax(ip->GradVp, interiorLength_z * interiorLength_x);
-        //cout << MaxValue << endl;
+        //cout << MaxValue << rank << endl;
+//        if(in_rank % ip->ShotN == ip->ShotN - 1)
+//        {
+//            // 归一化梯度
+
+//            //cout << MaxValue << endl;
+//        }
+//        else
+//        {
+//            MaxValue = 0;
+//        }
     }
 
     if(rank != ROOT_ID)
@@ -2790,18 +2919,22 @@ void CalStepLength(AFDPU2D Pa,
     else
     {
         max_buf[rank_size - 1] = MaxValue;
-        for(uint i = 0; i < rank_size - 1; ++i)
+        if(rank_size > 1)
         {
-            MPI_Recv(max_buf + i, 1, MPI_FLOAT, MPI_ANY_SOURCE, STEP_MAX, MPI_COMM_WORLD, &status_recv);
+            for(uint i = 0; i < rank_size - 1; ++i)
+            {
+                MPI_Recv(max_buf + i, 1, MPI_FLOAT, MPI_ANY_SOURCE, STEP_MAX, MPI_COMM_WORLD, &status_recv);
+            }
         }
+
         MaxValue = MatMax(max_buf, rank_size);
     }
 
     MPI_Barrier(MPI_COMM_WORLD);
     MPI_Bcast(&MaxValue, 1, MPI_FLOAT, ROOT_ID, MPI_COMM_WORLD);
 
-//    if(rank == ROOT_ID)
-//    cout << MaxValue << endl;
+    if(rank == ROOT_ID)
+    cout << "max" << MaxValue << endl;
     if (MaxValue > 1.0e-10f)
     {
         for (uint m = 0; m < interiorLength_z * interiorLength_x; m++)
@@ -2843,26 +2976,27 @@ void CalStepLength(AFDPU2D Pa,
 //    }
     if(*(begin + TOP))
     {
-        dataTransport_Vp(plan->h_Vp, pt, BOTTOM_TO_TOP, Pa);
+        dataTransport_Vp(plan->h_Vp, pt, BOTTOM_TO_TOP, Pa, mycomm);
     }
     if(*(begin + LEFT))
     {
-        dataTransport_Vp(plan->h_Vp, pt, RIGHT_TO_LEFT, Pa);
+        dataTransport_Vp(plan->h_Vp, pt, RIGHT_TO_LEFT, Pa, mycomm);
     }
     if(*(begin + BOTTOM))
     {
-        dataTransport_Vp(plan->h_Vp, pt, TOP_TO_BOTTOM, Pa);
+        dataTransport_Vp(plan->h_Vp, pt, TOP_TO_BOTTOM, Pa, mycomm);
     }
     if(*(begin + RIGHT))
     {
-        dataTransport_Vp(plan->h_Vp, pt, LEFT_TO_RIGHT, Pa);
+        dataTransport_Vp(plan->h_Vp, pt, LEFT_TO_RIGHT, Pa, mycomm);
     }
 
     //cout << rank << endl;
-
-    dataGather(plan->h_Vp, pt, STEP_VP);
     MPI_Barrier(MPI_COMM_WORLD);
-//cout << "xxxxxxxxx" << pt.getrank() << endl;
+//cout << rank << endl;
+    dataGather(plan->h_Vp, pt, STEP_VP, mycomm);
+    //MPI_Barrier(MPI_COMM_WORLD);
+//cout << rank << endl;
 //    if(temph_Vp.topborder)
 //    {
 //        dataGather(plan->h_Vp, pt, STEP_VP);
@@ -2883,7 +3017,10 @@ void CalStepLength(AFDPU2D Pa,
     UpdateVpPML(Pa, plan->h_Vp, plan->h_Grad, e, pt);
 //cout << "qqqqqqqqq" << rank << endl;
     // 对炮进行循环
-    for (uint is = 0; is < ip->ShotN; is = is + 2)
+//    for (uint is = 0; is < ip->ShotN; is = is + 2)
+//    {
+    uint is = rank % ip->ShotN;
+    if(is % 2 == 0)
     {
         memset((void *)plan->h_PHIx_U_x,	0,	sizeof(float) * block_z * block_x);
         memset((void *)plan->h_PHIz_U_z,	0,	sizeof(float) * block_z * block_x);
@@ -2915,10 +3052,11 @@ void CalStepLength(AFDPU2D Pa,
                 memcpy(plan->h_U_past + i * block_x, plan->h_U_now + (i + temph_U.topborder) * temph_U.length_x + temph_U.leftborder, block_x * sizeof(float));
                 memcpy(plan->h_U_now + (i + temph_U.topborder) * temph_U.length_x + temph_U.leftborder, plan->h_U_next + i * block_x, block_x * sizeof(float));
             }
-//cout << "xxxxxxxxx" << pt.getrank() << endl;
-            dataTransport(plan->h_U_now, pt, STEP_U, it);//send data
-            //dataGather(plan->h_U_now, pt, STEP_U);//recv data
 
+            dataTransport(plan->h_U_now, pt, STEP_U, it, mycomm);//send data
+            //dataGather(plan->h_U_now, pt, STEP_U);//recv data
+            MPI_Barrier(mycomm);
+//cout << "xxxxxxxxx" << pt.getrank() << endl;
             // 一步记录炮集
             StepShotGather(Pa, plan->h_U_now, plan->h_TrailWF, it, pt);
 
@@ -2942,8 +3080,8 @@ void CalStepLength(AFDPU2D Pa,
             StepVW(Pa, plan->h_U_now, plan->h_V, plan->h_W,
                 plan->h_PHIx_U_x, plan->h_PHIz_U_z, plan->h_Bx, plan->h_Bz, pt, it);
 
-            dataTransport(plan->h_V, pt, STEP_V, it);//send data
-            dataTransport(plan->h_W, pt, STEP_W, it);//send data
+            dataTransport(plan->h_V, pt, STEP_V, it, mycomm);//send data
+            dataTransport(plan->h_W, pt, STEP_W, it, mycomm);//send data
             //dataGather(plan->h_V, pt, STEP_V);//recv_v data
             //dataGather(plan->h_W, pt, STEP_W);//recv_w data
 
@@ -2978,7 +3116,7 @@ void CalStepLength(AFDPU2D Pa,
             memcpy(plan->h_TrueWF, sgs_t + is * Pa.Nt * RL_num,
                 sizeof(float) * Pa.Nt * RL_num);
 
-
+//cout << rank << "in" << endl;
 //            ofstream fout("h_TrailWF.txt");
 //            ofstream fout1("h_ResWF.txt");
 //            if(pt.getrank() == 0)
@@ -2994,19 +3132,135 @@ void CalStepLength(AFDPU2D Pa,
 
             // 求取上述波场和当前波场的残差
             MatAdd(plan->h_TrailWF, plan->h_TrailWF, plan->h_CurrWF,
-                RL_num, Pa.Nt, 1.0f, 1.0f, 0);
+                RL_num, Pa.Nt, 1.0f, 1.0f, 0);//plan->h_TrailWF
 
             // 求取残差波场
             StepResidual(Pa, plan->h_TrueWF, plan->h_CurrWF,
-                plan->h_ResWF, RL_num);
+                plan->h_ResWF, RL_num);//plan->h_ResWF
 
             // 将上述两种残差分别累加起来
             MatAdd(plan->h_SumResTrial, plan->h_SumResTrial,
-                plan->h_TrailWF, RL_num, Pa.Nt, 1.0f, 1.0f, 1);
+                plan->h_TrailWF, RL_num, Pa.Nt, 1.0f, 1.0f, 1);//plan->h_SumResTrial
             MatAdd(plan->h_SumResCurr, plan->h_SumResCurr,
-                plan->h_ResWF, RL_num, Pa.Nt, 1.0f, 1.0f, 1);
+                plan->h_ResWF, RL_num, Pa.Nt, 1.0f, 1.0f, 1);//plan->h_SumResCurr
+            if(rank % ip->ShotN)
+            {
+                MPI_Send(plan->h_SumResTrial, Pa.Nt * RL_num, MPI_FLOAT, rank - (rank % ip->ShotN), STEP_SUMRESTRIAL, MPI_COMM_WORLD);
+                MPI_Send(plan->h_SumResCurr, Pa.Nt * RL_num, MPI_FLOAT, rank - (rank % ip->ShotN), STEP_SUMRESCURR, MPI_COMM_WORLD);
+            }
+            else
+            {
+
+
+                float *h_sumrestrial = new float[Pa.Nt * RL_num];
+                float *h_sumrescurr = new float[Pa.Nt * RL_num];
+                for(int i = 0; i < ip->ShotN / 2 - 1; ++i)
+                {
+                    MPI_Recv(h_sumrestrial, Pa.Nt * RL_num, MPI_FLOAT, MPI_ANY_SOURCE, STEP_SUMRESTRIAL, MPI_COMM_WORLD, &status_recv);
+                    MPI_Recv(h_sumrescurr, Pa.Nt * RL_num, MPI_FLOAT, MPI_ANY_SOURCE, STEP_SUMRESCURR, MPI_COMM_WORLD, &status_recv);
+                    MatAdd(plan->h_SumResTrial, plan->h_SumResTrial,
+                        h_sumrestrial, RL_num, Pa.Nt, 1.0f, 1.0f, 1);//plan->h_SumResTrial
+                    MatAdd(plan->h_SumResCurr, plan->h_SumResCurr,
+                        h_sumrescurr, RL_num, Pa.Nt, 1.0f, 1.0f, 1);//plan->h_SumResCurr
+                }
+            }//if(rank % ip->ShotN)
         }
     }
+
+    if(rank % ip->ShotN == 0)
+    {
+        //cout << "in" << rank << endl;
+        int *ranks = new int[pt.get_in_sumBlock_x()];
+        int cpu_index_z = (Pa.PMLz + 2) / pt.getblockLength_z();
+        int max_rank_RL = in_rank, min_rank_RL = in_rank;
+        float buf[2];// = {fenzi, fenmu};
+        MPI_Request request, request_recv_fen, request_recv_max_RL, request_recv_min_RL;
+        MPI_Status status;
+        // 求取最终的步长
+
+        if(RL_num && indexmin_x <= Pa.PMLx && indexmax_x >= Pa.PMLx)
+        {
+            min_rank_RL = in_rank;
+            if(min_rank_RL != ROOT_ID)
+                MPI_Send(&min_rank_RL, 1, MPI_INT, ROOT_ID, STEP_MIN_RL, mycomm);
+        }
+        if(RL_num && indexmin_x <= Pa.PMLx + ip->St[0].rn - 1 && indexmax_x >= Pa.PMLx + ip->St[0].rn - 1)
+        {
+            max_rank_RL = in_rank;
+            if(max_rank_RL != ROOT_ID)
+                MPI_Send(&max_rank_RL, 1, MPI_INT, ROOT_ID, STEP_MAX_RL, mycomm);
+        }
+
+        if(in_rank == ROOT_ID)
+        {
+            if(!(RL_num && indexmin_x <= Pa.PMLx && indexmax_x >= Pa.PMLx))
+                MPI_Recv(&min_rank_RL, 1, MPI_INT, MPI_ANY_SOURCE, STEP_MIN_RL, mycomm, &status_recv);
+            if(!(RL_num && indexmin_x <= Pa.PMLx + ip->St[0].rn - 1 && indexmax_x >= Pa.PMLx + ip->St[0].rn - 1))
+                MPI_Recv(&max_rank_RL, 1, MPI_INT, MPI_ANY_SOURCE, STEP_MAX_RL, mycomm, &status_recv);
+        }
+        MPI_Barrier(mycomm);
+        //cout << rank << "in" << endl;
+        MPI_Bcast(&max_rank_RL, 1, MPI_INT, ROOT_ID, mycomm);
+        MPI_Bcast(&min_rank_RL, 1, MPI_INT, ROOT_ID, mycomm);
+
+        if(rank == ROOT_ID)
+        {
+            cout << "max_rank" << max_rank_RL << endl;
+            cout << "min_rank" << min_rank_RL << endl;
+        }
+
+        if(RL_num)
+        {
+            if(in_rank != min_rank_RL)
+            {
+                MPI_Recv(buf, 2, MPI_FLOAT, in_rank - 1, STEP_FEN, mycomm, &status_recv);
+                fenzi = buf[0];
+                fenmu = buf[1];
+                for (uint m = 0; m < Pa.Nt * RL_num; m++)
+                {
+                    fenzi += plan->h_SumResCurr[m] * plan->h_SumResTrial[m];
+                    fenmu += plan->h_SumResTrial[m] * plan->h_SumResTrial[m];
+                }
+                buf[0] = fenzi;
+                buf[1] = fenmu;
+
+                if(in_rank != max_rank_RL)
+                {
+                    MPI_Send(buf, 2, MPI_FLOAT, in_rank + 1, STEP_FEN, mycomm);
+                }
+                else
+                {
+                    ip->Alpha = (fenzi / fenmu) * e;
+                }
+            }
+            else
+            {
+                for (uint m = 0; m < Pa.Nt * RL_num; m++)
+                {
+                    fenzi += plan->h_SumResCurr[m] * plan->h_SumResTrial[m];
+                    fenmu += plan->h_SumResTrial[m] * plan->h_SumResTrial[m];
+                }
+                buf[0] = fenzi;
+                buf[1] = fenmu;
+                if(in_rank != max_rank_RL)
+                    MPI_Send(buf, 2, MPI_FLOAT, in_rank + 1, STEP_FEN, mycomm);
+                else
+                    ip->Alpha = (fenzi / fenmu) * e;
+            }
+        }
+
+        MPI_Barrier(mycomm);
+        MPI_Bcast(&ip->Alpha, 1, MPI_FLOAT, max_rank_RL, mycomm);
+        if(rank == ROOT_ID)
+            cout << "alpha=" << ip->Alpha << endl;
+    }
+
+
+    //cout << rank << "out" << endl;
+    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Bcast(&ip->Alpha, 1, MPI_FLOAT, ROOT_ID, MPI_COMM_WORLD);
+    //cout << "alpha=" << ip->Alpha << endl;
+    //}//shotN
 
 
 
@@ -3055,82 +3309,85 @@ void CalStepLength(AFDPU2D Pa,
 //    }
 
 
-    int *ranks = new int[pt.getsumBlock_x()];
-    int cpu_index_z = (Pa.PMLz + 2) / pt.getblockLength_z();
-    int max_rank_RL = rank, min_rank_RL = rank;
-    float buf[2];// = {fenzi, fenmu};
-    MPI_Request request, request_recv_fen, request_recv_max_RL, request_recv_min_RL;
-    MPI_Status status;
-    // 求取最终的步长
+//    int *ranks = new int[pt.getsumBlock_x()];
+//    int cpu_index_z = (Pa.PMLz + 2) / pt.getblockLength_z();
+//    int max_rank_RL = in_rank, min_rank_RL = in_rank;
+//    float buf[2];// = {fenzi, fenmu};
+//    MPI_Request request, request_recv_fen, request_recv_max_RL, request_recv_min_RL;
+//    MPI_Status status;
+//    // 求取最终的步长
 
-    MPI_Barrier(MPI_COMM_WORLD);
+//    MPI_Barrier(MPI_COMM_WORLD);
 //cout << "mmmmmmmm" << pt.getrank() << endl;
 
 
-    //cout << "oooo" << rank << endl;
-    if(RL_num && indexmin_x <= Pa.PMLx && indexmax_x >= Pa.PMLx)
-    {
-        min_rank_RL = rank;
-        if(min_rank_RL != ROOT_ID)
-            MPI_Send(&min_rank_RL, 1, MPI_INT, ROOT_ID, STEP_MIN_RL, MPI_COMM_WORLD);
-    }
-    if(RL_num && indexmin_x <= Pa.PMLx + ip->St[0].rn - 1 && indexmax_x >= Pa.PMLx + ip->St[0].rn - 1)
-    {
-        max_rank_RL = rank;
-        if(max_rank_RL != ROOT_ID)
-            MPI_Send(&max_rank_RL, 1, MPI_INT, ROOT_ID, STEP_MAX_RL, MPI_COMM_WORLD);
-    }
+//    //cout << "oooo" << rank << endl;
+//    if(RL_num && indexmin_x <= Pa.PMLx && indexmax_x >= Pa.PMLx)
+//    {
+//        min_rank_RL = in_rank;
+//        if(min_rank_RL != ROOT_ID)
+//            MPI_Send(&min_rank_RL, 1, MPI_INT, ROOT_ID, STEP_MIN_RL, mycomm);
+//    }
+//    if(RL_num && indexmin_x <= Pa.PMLx + ip->St[0].rn - 1 && indexmax_x >= Pa.PMLx + ip->St[0].rn - 1)
+//    {
+//        max_rank_RL = in_rank;
+//        if(max_rank_RL != ROOT_ID)
+//            MPI_Send(&max_rank_RL, 1, MPI_INT, ROOT_ID, STEP_MAX_RL, mycomm);
+//    }
 
-    if(rank == ROOT_ID)
-    {
-        if(!(RL_num && indexmin_x <= Pa.PMLx + ip->St[0].rn - 1 && indexmax_x >= Pa.PMLx + ip->St[0].rn - 1))
-            MPI_Recv(&max_rank_RL, 1, MPI_INT, MPI_ANY_SOURCE, STEP_MAX_RL, MPI_COMM_WORLD, &status_recv);
-        if(!(RL_num && indexmin_x <= Pa.PMLx && indexmax_x >= Pa.PMLx))
-            MPI_Recv(&min_rank_RL, 1, MPI_INT, MPI_ANY_SOURCE, STEP_MIN_RL, MPI_COMM_WORLD, &status_recv);
-    }
-    MPI_Barrier(MPI_COMM_WORLD);
-    MPI_Bcast(&max_rank_RL, 1, MPI_INT, ROOT_ID, MPI_COMM_WORLD);
-    MPI_Bcast(&min_rank_RL, 1, MPI_INT, ROOT_ID, MPI_COMM_WORLD);
+//    if(in_rank == ROOT_ID)
+//    {
+//        if(min_rank_RL != in_rank && !(RL_num && indexmin_x <= Pa.PMLx && indexmax_x >= Pa.PMLx))
+//            MPI_Recv(&min_rank_RL, 1, MPI_INT, MPI_ANY_SOURCE, STEP_MIN_RL, mycomm, &status_recv);
+//        if(max_rank_RL != in_rank && !(RL_num && indexmin_x <= Pa.PMLx + ip->St[0].rn - 1 && indexmax_x >= Pa.PMLx + ip->St[0].rn - 1))
+//            MPI_Recv(&max_rank_RL, 1, MPI_INT, MPI_ANY_SOURCE, STEP_MAX_RL, mycomm, &status_recv);
+//    }
+//    MPI_Barrier(MPI_COMM_WORLD);
+//    MPI_Bcast(&max_rank_RL, 1, MPI_INT, ROOT_ID, mycomm);
+//    MPI_Bcast(&min_rank_RL, 1, MPI_INT, ROOT_ID, mycomm);
 
-//    if(rank == ROOT_ID)
-//        cout << max_rank_RL << " " << min_rank_RL << endl;
+////    if(rank == ROOT_ID)
+////        cout << max_rank_RL << " " << min_rank_RL << endl;
 
-    if(RL_num)
-    {
-        if(rank != min_rank_RL)
-        {
-            MPI_Recv(buf, 2, MPI_FLOAT, rank - 1, STEP_FEN, MPI_COMM_WORLD, &status_recv);
-            fenzi = buf[0];
-            fenmu = buf[1];
-            for (uint m = 0; m < Pa.Nt * RL_num; m++)
-            {
-                fenzi += plan->h_SumResCurr[m] * plan->h_SumResTrial[m];
-                fenmu += plan->h_SumResTrial[m] * plan->h_SumResTrial[m];
-            }
-            buf[0] = fenzi;
-            buf[1] = fenmu;
+//    if(RL_num)
+//    {
+//        if(in_rank != min_rank_RL)
+//        {
+//            MPI_Recv(buf, 2, MPI_FLOAT, in_rank - 1, STEP_FEN, mycomm, &status_recv);
+//            fenzi = buf[0];
+//            fenmu = buf[1];
+//            for (uint m = 0; m < Pa.Nt * RL_num; m++)
+//            {
+//                fenzi += plan->h_SumResCurr[m] * plan->h_SumResTrial[m];
+//                fenmu += plan->h_SumResTrial[m] * plan->h_SumResTrial[m];
+//            }
+//            buf[0] = fenzi;
+//            buf[1] = fenmu;
 
-            if(rank != max_rank_RL)
-            {
-                MPI_Send(buf, 2, MPI_FLOAT, rank + 1, STEP_FEN, MPI_COMM_WORLD);
-            }
-            else
-            {
-                ip->Alpha = (fenzi / fenmu) * e;
-            }
-        }
-        else
-        {
-            for (uint m = 0; m < Pa.Nt * RL_num; m++)
-            {
-                fenzi += plan->h_SumResCurr[m] * plan->h_SumResTrial[m];
-                fenmu += plan->h_SumResTrial[m] * plan->h_SumResTrial[m];
-            }
-            buf[0] = fenzi;
-            buf[1] = fenmu;
-            MPI_Send(buf, 2, MPI_FLOAT, rank + 1, STEP_FEN, MPI_COMM_WORLD);
-        }
-    }
+//            if(in_rank != max_rank_RL)
+//            {
+//                MPI_Send(buf, 2, MPI_FLOAT, in_rank + 1, STEP_FEN, mycomm);
+//            }
+//            else
+//            {
+//                ip->Alpha = (fenzi / fenmu) * e;
+//            }
+//        }
+//        else
+//        {
+//            for (uint m = 0; m < Pa.Nt * RL_num; m++)
+//            {
+//                fenzi += plan->h_SumResCurr[m] * plan->h_SumResTrial[m];
+//                fenmu += plan->h_SumResTrial[m] * plan->h_SumResTrial[m];
+//            }
+//            buf[0] = fenzi;
+//            buf[1] = fenmu;
+//            if(in_rank != max_rank_RL)
+//                MPI_Send(buf, 2, MPI_FLOAT, in_rank + 1, STEP_FEN, mycomm);
+//            else
+//                ip->Alpha = (fenzi / fenmu) * e;
+//        }
+//    }
 
 
 
@@ -3156,9 +3413,9 @@ void CalStepLength(AFDPU2D Pa,
 
     //cout << ip->Alpha << endl;
 
-    MPI_Barrier(MPI_COMM_WORLD);
-    MPI_Bcast(&ip->Alpha, 1, MPI_FLOAT, max_rank_RL, MPI_COMM_WORLD);
-
+//    MPI_Barrier(MPI_COMM_WORLD);
+//    MPI_Bcast(&ip->Alpha, 1, MPI_FLOAT, max_rank_RL, mycomm);
+//    MPI_Bcast()
 
 //    delete &buf;
 //    delete ranks;
@@ -3180,7 +3437,7 @@ plan：全局变量
 void PreProcess(AFDPU2D Pa,
                 IP *ip,
                 CPUVs *plan,
-                const Partition &pt)
+                const Partition &pt, const MPI_Comm& mycomm)
 {
     uint block_x = pt.getblockLength_x();
     uint block_z = pt.getblockLength_z();
@@ -3212,22 +3469,22 @@ void PreProcess(AFDPU2D Pa,
     auto begin = trans_h_Vp.begin();
     if(*(begin + TOP))
     {//cout << "what" << endl;
-        dataTransport_Vp(plan->h_Vp, pt, BOTTOM_TO_TOP, Pa);
+        dataTransport_Vp(plan->h_Vp, pt, BOTTOM_TO_TOP, Pa, mycomm);
     }
     if(*(begin + LEFT))
     {//cout << "what" << endl;
-        dataTransport_Vp(plan->h_Vp, pt, RIGHT_TO_LEFT, Pa);
+        dataTransport_Vp(plan->h_Vp, pt, RIGHT_TO_LEFT, Pa, mycomm);
     }
     if(*(begin + BOTTOM))
     {//cout << "what" << endl;
-        dataTransport_Vp(plan->h_Vp, pt, TOP_TO_BOTTOM, Pa);
+        dataTransport_Vp(plan->h_Vp, pt, TOP_TO_BOTTOM, Pa, mycomm);
     }
     if(*(begin + RIGHT))
     {//cout << "what" << endl;
-        dataTransport_Vp(plan->h_Vp, pt, LEFT_TO_RIGHT, Pa);
+        dataTransport_Vp(plan->h_Vp, pt, LEFT_TO_RIGHT, Pa, mycomm);
     }
 
-    dataGather(plan->h_Vp, pt, STEP_VP);
+    dataGather(plan->h_Vp, pt, STEP_VP, mycomm);
 
 //    if(temph_Vp.topborder)
 //    {//cout << "eee" << endl;

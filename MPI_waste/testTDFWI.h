@@ -266,7 +266,7 @@ void MatMul(float *Mat,
 void CalTrueWF(AFDPU2D Pa,
             IP *ip,
             CPUVs *plan,
-            float *sgs_t, const Partition &pt);
+            float *sgs_t, const Partition &pt, MPI_Comm &mycomm);
 
 // 求取梯度
 void CalGrad(AFDPU2D Pa,
@@ -276,7 +276,7 @@ void CalGrad(AFDPU2D Pa,
             float *sgs_c,
             float *sgs_r,
             uint It,
-             const Partition &pt);
+             const Partition &pt, const MPI_Comm &mycomm);
 
 // 求取步长
 void CalStepLength(AFDPU2D Pa,
@@ -284,12 +284,12 @@ void CalStepLength(AFDPU2D Pa,
                 CPUVs *plan,
                 float *sgs_t,
                 float *sgs_c,
-                float e, const Partition &pt);
+                float e, const Partition &pt, const MPI_Comm &mycomm);
 
 // 下次迭代前的预处理
 void PreProcess(AFDPU2D Pa,
                 IP *ip,
-                CPUVs *plan, const Partition &pt);
+                CPUVs *plan, const Partition &pt, const MPI_Comm &mycomm);
 
 
 #endif // TESTTDFWI_H

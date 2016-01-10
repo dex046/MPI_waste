@@ -6,12 +6,19 @@
 #include "testTDFWI.h"
 #include "RWsgy.h"
 #include "Partition.h"
-
+#include <fstream>
+#include <time.h>
 
 using namespace std;
 
 int main(int argc, char ** argv)
 {
+    ofstream fout("result.txt");
+    struct tm *ptr;
+    time_t lt;
+    lt = time(NULL);
+    fout << (ctime(&lt)) << endl;
+    fout << "******************************************" << endl;
     int rank, p_size;
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -42,7 +49,7 @@ int main(int argc, char ** argv)
     IP *ip;
     ip = new IP[1];
     memset((void *)ip, 0, sizeof(IP));
-    ip->ShotN = 48;
+    ip->ShotN = 2;
     ip->IterN = 1;
     ip->Alpha = 0.0f;
 
@@ -56,11 +63,45 @@ int main(int argc, char ** argv)
         ip->St[i].s.Sz = Pa->PMLz + 2;
     }
 
+    int group_in_size = p_size / ip->ShotN;
+    int *ranks = new int[group_in_size];
+    int temp = rank % ip->ShotN;
+    for(int i = 0; i < group_in_size; ++i)
+    {
+        ranks[i] = temp + i * ip->ShotN;
+    }
+
+    MPI_Group comm_group, newgroup;
+    MPI_Comm mycomm;
+
+    MPI_Comm_group(MPI_COMM_WORLD, &comm_group);
+
+    MPI_Group_incl(comm_group, group_in_size, ranks, &newgroup);
+    MPI_Comm_create(MPI_COMM_WORLD, newgroup, &mycomm);
+
+//    int testsize = 0;
+//    MPI_Comm_size(mycomm, &testsize);
+//    cout << testsize << endl;
+
+
     //MPI_Barrier(MPI_COMM_WORLD);
 
 
-    uint cpu_x = 2, cpu_z = 2;
-    Partition pt(Pa, ip, nnx, nnz, cpu_x, cpu_z, temph_U, temph_VW, 8, rank, p_size);//borderlength = 4
+    uint cpu_x = 4, cpu_z = 4;
+    uint shot_x = 1, shot_z = 8;
+
+    //Partition pt(Pa, ip, nnx, nnz, cpu_x, cpu_z, temph_U, temph_VW, 8, rank, p_size);//borderlength = 4
+
+    Partition pt(Pa, ip, nnx, nnz, cpu_x, cpu_z, shot_x, shot_z, temph_U, temph_VW, 8, rank, p_size, rank / ip->ShotN, group_in_size);
+
+    if(rank == 2)
+    {
+        cout << pt.getindexmin_x() << " " << pt.getindexmax_x() << endl;
+        cout << pt.getindexmin_z() << " " << pt.getindexmax_z() << endl;
+    }
+//    MPI_Barrier(MPI_COMM_WORLD);
+//    cout << rank << " " << pt.get_in_rank() << endl;
+//    MPI_Barrier(MPI_COMM_WORLD);
 
 //    if(rank == 39)
 //    {
@@ -74,6 +115,8 @@ int main(int argc, char ** argv)
         auto tempbegin = temp.begin();
         //cout << *(tempbegin + 0) << " " << *(tempbegin + 1) << " " << *(tempbegin + 2) << " " << *(tempbegin + 3) << " " << endl;
     }
+
+
 
     uint length_x = pt.getblockLength_x();
     uint length_z = pt.getblockLength_z();
@@ -122,6 +165,7 @@ int main(int argc, char ** argv)
     // 读取速度信息
     ReadData(TrueVp, ip->TrueVp, pt, 0);
     ReadData(InitVp, ip->CurrVp, pt, 0);
+//    if(rank == 2)
 //    for(int i = 0; i < length_x * length_z; ++i)
 //        cout << ip->TrueVp[i];
 
@@ -186,22 +230,45 @@ int main(int argc, char ** argv)
         cout << "\tNshot = " << ip->ShotN << endl;
         cout << "\tIteration number = " << ip->IterN << endl;
         cout << "********************************************************************************************" << endl;
+
+        fout << "********************************************************************************************" << endl;
+        fout << "Doing Time domain Full Waveform Inversion ..." << endl;
+        fout << "Parameters of Inversion are as follows:" << endl;
+        fout << "\tNx = " << Pa->Nx << endl;
+        fout << "\tNz = " << Pa->Nz << endl;
+        fout << "\tdx = " << Pa->dx << "m" << endl;
+        fout << "\tdz = " << Pa->dz << "m" << endl;
+        fout << "\tNt = " << Pa->Nt << endl;
+        fout << "\tdt = " << Pa->dt << "s" << endl;
+        fout << "\tNpml = " << Pa->PMLx << endl;
+        fout << "\tf0 = " << Pa->f0 << endl;
+        fout << "\tNshot = " << ip->ShotN << endl;
+        fout << "\tIteration number = " << ip->IterN << endl;
+        fout << "********************************************************************************************" << endl;
     }
 
     clock_t begin, duration;
 
     // 求取观测波场
     if(rank == ROOT_ID)
+    {
         cout << "\tCalculating the observed data..." << endl;
+
+        fout << "\tCalculating the observed data..." << endl;
+    }
 
     begin = clock();
 //cout << rank << endl;
-    CalTrueWF(*Pa, ip, plan, sgs_t, pt);//求取观测波场 plan  sgs_t
+    CalTrueWF(*Pa, ip, plan, sgs_t, pt, mycomm);//求取观测波场 plan  sgs_t
     duration = clock() - begin;
 
-    MPI_Barrier(MPI_COMM_WORLD);
+    //MPI_Barrier(MPI_COMM_WORLD);
     if(rank == ROOT_ID)
+    {
         cout << "\tCalculating the observed data used:\t" << duration / CLOCKS_PER_SEC << "s" << endl;
+
+        fout << "\tCalculating the observed data used:\t" << duration / CLOCKS_PER_SEC << "s" << endl;
+    }
 
     // 迭代过程中为了求取步长使用的试探步长
     float e = 24.0f;
@@ -217,38 +284,51 @@ int main(int argc, char ** argv)
         {
             cout << "\n\tDoing the " << It << "th iteration" << endl;
             cout << "\tCalculating the Gradient..." << endl;
+
+            fout << "\n\tDoing the " << It << "th iteration" << endl;
+            fout << "\tCalculating the Gradient..." << endl;
         }
 
+        //cout << "xxxx" << rank << endl;
         begin = clock();
-        CalGrad(*Pa, ip, plan, sgs_t, sgs_c, sgs_r, It, pt);//cout << rank << endl;
-        //cout << "ooooooo" << pt.getrank() << endl;
-        MPI_Barrier(MPI_COMM_WORLD);
+        CalGrad(*Pa, ip, plan, sgs_t, sgs_c, sgs_r, It, pt, mycomm);//cout << rank << endl;
+        //cout << "aaaaaaaaaa" << pt.getrank() << endl;
+        //MPI_Barrier(MPI_COMM_WORLD);
 
 
 
         //cout << ip->ObjIter[It] << endl;
         // 梯度后处理
         PostProcessGrad(*Pa, ip->GradVp, plan->h_Vp, pt);
-        MPI_Barrier(MPI_COMM_WORLD);
+
+//        if(rank == 2)
+//        {
+//            cout << "wwwww" << pt.get_in_blockPosition_x() << " " << pt.get_in_blockPosition_z() << "wwww" << endl;
+//        }
+        //MPI_Barrier(MPI_COMM_WORLD);
 //cout << "ooooooo" << pt.getrank() << endl;
         // 求取步长
-        CalStepLength(*Pa, ip, plan, sgs_t, sgs_c, e, pt);//cout << rank << endl;
+        CalStepLength(*Pa, ip, plan, sgs_t, sgs_c, e, pt, mycomm);//cout << rank << endl;
         duration = clock() - begin;
 
 
 
-        MPI_Barrier(MPI_COMM_WORLD);
+        //MPI_Barrier(MPI_COMM_WORLD);
         if(rank == ROOT_ID)
         {
             cout << "\tObjective function value:\t" << ip->ObjIter[It] << endl;
             cout << "\tStep length:\t" << ip->Alpha << endl;
             cout << "\tThe " << It << "th iteration used " << duration / CLOCKS_PER_SEC << "s" << endl;
+
+            fout << "\tObjective function value:\t" << ip->ObjIter[It] << endl;
+            fout << "\tStep length:\t" << ip->Alpha << endl;
+            fout << "\tThe " << It << "th iteration used " << duration / CLOCKS_PER_SEC << "s" << endl;
         }
 
         //ip->Alpha = 152.931;
         // 下一步迭代预处理
-        PreProcess(*Pa, ip, plan, pt);
-        MPI_Barrier(MPI_COMM_WORLD);
+        PreProcess(*Pa, ip, plan, pt, mycomm);
+        //MPI_Barrier(MPI_COMM_WORLD);
 
     }
 
@@ -360,6 +440,8 @@ int main(int argc, char ** argv)
     if(rank == ROOT_ID)
     {
         cout << "\tWriting data to .sgy1" << endl;
+
+        fout << "\tWriting data to .sgy1" << endl;
     }
 
     const char * const TrueSg = "TrueSG.sgy";

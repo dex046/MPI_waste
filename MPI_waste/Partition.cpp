@@ -9,28 +9,41 @@ Partition::Partition()
 {
 }
 
-Partition::Partition(const AFDPU2D *Pa, const IP *ip, uint totallength_x, uint totallength_z, uint sumblock_x, uint sumblock_z, H_Border h_U, H_Border h_VW, uint border_h_Coord, uint rank, uint size)
+Partition::Partition(const AFDPU2D *Pa, const IP *ip, uint totallength_x, uint totallength_z, uint sumblock_x, uint sumblock_z, uint in_sumblock_x, uint in_sumblock_z, H_Border h_U, H_Border h_VW, uint border_h_Coord, uint rank, uint size, uint in_rank, uint in_size)
 {
     this->totallength_x = totallength_x;
     this->totallength_z = totallength_z;
+
     this->sumBlock_x = sumblock_x;
     this->sumBlock_z = sumblock_z;
+    this->in_sumBlock_x = in_sumblock_x;
+    this->in_sumBlock_z = in_sumblock_z;
+
     this->rank = rank;
     this->size = size;
+
+    this->in_rank = in_rank;
+    this->in_size = in_size;
     
-    this->blockPosition_x = rank % this->getsumBlock_x();
-    this->blockPosition_z = rank / this->getsumBlock_x();
-    this->blockLength_x = totallength_x / this->getsumBlock_x();
-    this->blockLength_z = totallength_z / this->getsumBlock_z();
+    //this->shot_num = rank % ip->ShotN;
+
+    this->blockPosition_x = rank % this->in_sumBlock_x;
+    this->blockPosition_z = rank / this->in_sumBlock_x;
+
+    this->in_blockPosition_x = in_rank % this->in_sumBlock_x;
+    this->in_blockPosition_z = in_rank / this->in_sumBlock_x;
+
+    this->blockLength_x = totallength_x / this->in_sumBlock_x;
+    this->blockLength_z = totallength_z / this->in_sumBlock_z;
 
 
-    uint remainder_x = totallength_x % this->getsumBlock_x();
-    uint remainder_z = totallength_z % this->getsumBlock_z();
+    uint remainder_x = totallength_x % this->in_sumBlock_x;
+    uint remainder_z = totallength_z % this->in_sumBlock_z;
 
-    this->indexmin_x = blockPosition_x * blockLength_x + (blockPosition_x <= remainder_x ? blockPosition_x : remainder_x);
-    this->indexmax_x = this->indexmin_x + blockLength_x - 1 + (blockPosition_x < remainder_x ? 1 : 0);
-    this->indexmin_z = blockPosition_z * blockLength_z + (blockPosition_z <= remainder_z ? blockPosition_z : remainder_z);
-    this->indexmax_z = this->indexmin_z + this->blockLength_z - 1 + (blockPosition_z < remainder_z ? 1 : 0);
+    this->indexmin_x = in_blockPosition_x * blockLength_x + (in_blockPosition_x <= remainder_x ? in_blockPosition_x : remainder_x);
+    this->indexmax_x = this->indexmin_x + blockLength_x - 1 + (in_blockPosition_x < remainder_x ? 1 : 0);
+    this->indexmin_z = in_blockPosition_z * blockLength_z + (in_blockPosition_z <= remainder_z ? in_blockPosition_z : remainder_z);
+    this->indexmax_z = this->indexmin_z + this->blockLength_z - 1 + (in_blockPosition_z < remainder_z ? 1 : 0);
 
     this->blockLength_x = this->indexmax_x - this->indexmin_x + 1;
     this->blockLength_z = this->indexmax_z - this->indexmin_z + 1;
@@ -80,6 +93,20 @@ uint Partition::getsize() const
     return this->size;
 }
 
+uint Partition::get_in_rank() const
+{
+    return this->in_rank;
+}
+uint Partition::get_in_size() const
+{
+    return this->in_size;
+}
+
+//uint Partition::get_shot_num() const
+//{
+//    return this->shot_num;
+//}
+
 uint Partition::getblockPosition_x() const
 {
     return this->blockPosition_x;
@@ -87,6 +114,14 @@ uint Partition::getblockPosition_x() const
 uint Partition::getblockPosition_z() const
 {
     return this->blockPosition_z;
+}
+uint Partition::get_in_blockPosition_x() const
+{
+    return this->in_blockPosition_x;
+}
+uint Partition::get_in_blockPosition_z() const
+{
+    return this->in_blockPosition_z;
 }
 uint Partition::getblockLength_x() const
 {
@@ -112,6 +147,16 @@ uint Partition::getsumBlock_z() const
 {
     return this->sumBlock_z;
 }
+
+uint Partition::get_in_sumBlock_x() const
+{
+    return this->in_sumBlock_x;
+}
+uint Partition::get_in_sumBlock_z() const
+{
+    return this->in_sumBlock_z;
+}
+
 uint Partition::getindexmin_x() const
 {
     return this->indexmin_x;
@@ -152,6 +197,7 @@ uint Partition::getinteriorLength_z() const
 {
     return this->interiorLength_z;
 }
+
 bool Partition::isfirstblock_x() const
 {
     return this->rank % this->getsumBlock_x() == 0;
@@ -168,6 +214,24 @@ bool Partition::islastblock_z() const
 {
     return this->rank / this->getsumBlock_x() >= this->getsumBlock_z() - 1;
 }
+
+bool Partition::in_isfirstblock_x() const
+{
+    return this->in_rank % this->in_sumBlock_x == 0;
+}
+bool Partition::in_isfirstblock_z() const
+{
+    return this->in_rank < this->in_sumBlock_x;
+}
+bool Partition::in_islastblock_x() const
+{
+    return this->in_rank % this->in_sumBlock_x == this->in_sumBlock_x - 1;
+}
+bool Partition::in_islastblock_z() const
+{
+    return this->in_rank / this->in_sumBlock_x >= this->in_sumBlock_z - 1;
+}
+
 uint Partition::getinsidenum() const
 {
     return this->inside_num;
@@ -258,7 +322,7 @@ uint Partition::getRL_endnum() const
 }
 void Partition::seth_Vp_trans(AFDPU2D Pa)
 {
-    if(!this->isfirstblock_z())
+    if(!this->in_isfirstblock_z())
     {
         if(this->indexmin_z <= Pa.PMLz && this->indexmax_z >= Pa.PMLz)//to top
         {
@@ -274,7 +338,7 @@ void Partition::seth_Vp_trans(AFDPU2D Pa)
         this->trans_h_Vp.push_back(0);
     }
 
-    if(!this->isfirstblock_x())
+    if(!this->in_isfirstblock_x())
     {
         if(this->indexmin_x <= Pa.PMLx && this->indexmax_x >= Pa.PMLx)//to left
         {
@@ -290,7 +354,7 @@ void Partition::seth_Vp_trans(AFDPU2D Pa)
         this->trans_h_Vp.push_back(0);
     }
 
-    if(!this->islastblock_z())
+    if(!this->in_islastblock_z())
     {
         if(this->indexmin_z < Pa.PMLz + Pa.Nz && this->indexmax_z >= Pa.PMLz + Pa.Nz - 1)//to bottom
         {
@@ -306,7 +370,7 @@ void Partition::seth_Vp_trans(AFDPU2D Pa)
         this->trans_h_Vp.push_back(0);
     }
 
-    if(!this->islastblock_x())
+    if(!this->in_islastblock_x())
     {
         if(this->indexmin_x < Pa.PMLx + Pa.Nx && this->indexmax_x >= Pa.PMLx + Pa.Nx - 1)//to right
         {

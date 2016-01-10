@@ -282,7 +282,7 @@ bool ReadSgyData(char FileName[], Trace *trace, REEL reel,
 
     for (int i = 0; i < length_x; i++)
     {
-        if(pt.isfirstblock_z())
+        if(pt.in_isfirstblock_z())
         {
             // 读道头
             ///fread(&trace[i].head.h2, 2, 120, fdata);//h2 h4 headstruct
@@ -508,7 +508,7 @@ bool WriteSgy(const char * const FileName, unsigned char *f3200, Trace *trace, u
     for (i = 0; i < block_x; i++)
     {
         // 写道头
-        if(pt.isfirstblock_z())
+        if(pt.in_isfirstblock_z())
         {
             trace[i].head.headstruct.cdp = indexmin_x + i;
             trace[i].head.headstruct.ns = SampleNum;

@@ -1,0 +1,18 @@
+Fri Jan  8 20:34:23 2016
+
+******************************************
+********************************************************************************************
+Doing Time domain Full Waveform Inversion ...
+Parameters of Inversion are as follows:
+	Nx = 510
+	Nz = 134
+	dx = 10m
+	dz = 10m
+	Nt = 3000
+	dt = 0.001s
+	Npml = 50
+	f0 = 10
+	Nshot = 2
+	Iteration number = 1
+********************************************************************************************
+	Calculating the observed data...

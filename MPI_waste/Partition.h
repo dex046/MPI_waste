@@ -100,14 +100,25 @@ public:
 class Partition{
 private:
     uint rank, size;
+
+    uint in_rank, in_size;
+
+    //uint shot_num;
+
     uint blockPosition_x;
     uint blockPosition_z;
+
+    uint in_blockPosition_x;
+    uint in_blockPosition_z;
 
     uint totallength_x;
     uint totallength_z;
 
     uint sumBlock_x;
     uint sumBlock_z;
+
+    uint in_sumBlock_x;
+    uint in_sumBlock_z;
 
     uint indexmin_x;
     uint indexmax_x;
@@ -149,20 +160,32 @@ private:
 
 public:
     Partition();
-    Partition(const AFDPU2D *Pa, const IP *ip, uint totallength_x, uint totallength_z, uint sumblock_x, uint sumblock_z, H_Border h_U, H_Border h_VW, uint border_h_Coord, uint rank, uint size);
+    Partition(const AFDPU2D *Pa, const IP *ip, uint totallength_x, uint totallength_z, uint sumblock_x, uint sumblock_z, uint in_sumblock_x, uint in_sumblock_z, H_Border h_U, H_Border h_VW, uint border_h_Coord, uint rank, uint size, uint in_rank, uint in_size);
     ~Partition();
 
 
     uint getrank() const;
     uint getsize() const;
 
+    uint get_in_rank() const;
+    uint get_in_size() const;
+
+    //uint get_shot_num() const;
+
     uint getblockPosition_x() const;
     uint getblockPosition_z() const;
+
+    uint get_in_blockPosition_x() const;
+    uint get_in_blockPosition_z() const;
 
     uint gettotallength_x() const;
     uint gettotallength_z() const;
     uint getsumBlock_x() const;
     uint getsumBlock_z() const;
+
+    uint get_in_sumBlock_x() const;
+    uint get_in_sumBlock_z() const;
+
     uint getblockLength_x() const;
     uint getblockLength_z() const;
     uint getindexmin_x() const;
@@ -182,6 +205,11 @@ public:
     bool islastblock_x() const;
     bool isfirstblock_z() const;
     bool islastblock_z() const;
+
+    bool in_isfirstblock_x() const;
+    bool in_islastblock_x() const;
+    bool in_isfirstblock_z() const;
+    bool in_islastblock_z() const;
 
     uint getinsidenum() const;
     Inside* getInside() const;
